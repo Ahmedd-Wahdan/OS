@@ -319,7 +319,7 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	if(virtual_address == 0 || virtual_address<USER_HEAP_START||virtual_address>=USER_HEAP_MAX||size<=0)
 			{
 				env_exit();
-			}
+			}//end env
 
 	allocate_user_mem(cur_env, virtual_address, size);
 	return;
