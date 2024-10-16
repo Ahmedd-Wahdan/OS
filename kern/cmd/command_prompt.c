@@ -464,15 +464,19 @@ int process_command(int number_of_arguments, char** arguments)
 
 	for (int i = 0; i < NUM_OF_COMMANDS; i++)
 	{
+
 		if (strcmp(arguments[0], commands[i].name) == 0)
 		{
-			if (commands[i].num_of_args!=number_of_arguments-1){
-				LIST_INSERT_TAIL(&foundCommands,&commands[i]);
-				return CMD_INV_NUM_ARGS ;
+		 if (commands[i].num_of_args==number_of_arguments-1){
+				//cprintf("Processing command: %s, expected args: %d, provided args: %d\n", arguments[0], commands[i].num_of_args, number_of_arguments);
+				return i;
 			}
+		 else if (commands[i].num_of_args== -1 && number_of_arguments>=2){
+			 return i;
+		 }
 			else {
-
-				return i;}
+				LIST_INSERT_TAIL(&foundCommands,&commands[i]);
+				return CMD_INV_NUM_ARGS ;}
 		}
 		else{
 			char * ptrArg =arguments[0];
