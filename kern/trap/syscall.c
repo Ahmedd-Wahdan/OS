@@ -328,7 +328,7 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 void sys_allocate_chunk(uint32 virtual_address, uint32 size, uint32 perms)
 {
 	if(virtual_address == 0 || virtual_address<USER_HEAP_START||virtual_address>=USER_HEAP_MAX||size<=0)
-			{
+			{//env_exit
 				env_exit();
 			}
 	//TODO: [PROJECT'24.MS1 - #03] [2] SYSTEM CALLS - Params Validation
