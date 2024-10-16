@@ -456,13 +456,43 @@ int execute_command(char *command_string)
 int process_command(int number_of_arguments, char** arguments)
 {
 	//TODO: [PROJECT'24.MS1 - #01] [1] PLAY WITH CODE! - process_command
+	struct Command *iterator;
+	while ((iterator = LIST_FIRST(&foundCommands)) != NULL) {
+	    LIST_REMOVE(&foundCommands, iterator);}
+
+     int found=0;
 
 	for (int i = 0; i < NUM_OF_COMMANDS; i++)
 	{
 		if (strcmp(arguments[0], commands[i].name) == 0)
 		{
-			return i;
+			if (commands[i].num_of_args!=number_of_arguments-1){
+				LIST_INSERT_TAIL(&foundCommands,&commands[i]);
+				return CMD_INV_NUM_ARGS ;
+			}
+			else {
+
+				return i;}
 		}
+		else{
+			char * ptrArg =arguments[0];
+			char * ptrCom =commands[i].name;
+			while (*ptrArg!='\0'&&*ptrCom!='\0'){
+     if (*ptrArg==*ptrCom){ //a letter matched
+	ptrArg++;
+	ptrCom++;
+
+         } else //continue iterating over command name letters
+	   ptrCom++;
+		}
+			if( *ptrArg=='\0'){
+				LIST_INSERT_TAIL(&foundCommands,&commands[i]);
+				found=1;
+			}
+
 	}
+}   if(found ==1){
+return CMD_MATCHED;}
+
 	return CMD_INVALID;
 }
