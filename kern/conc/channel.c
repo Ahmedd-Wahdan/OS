@@ -30,8 +30,17 @@ void sleep(struct Channel *chan, struct spinlock* lk)
 {
 	//TODO: [PROJECT'24.MS1 - #10] [4] LOCKS - sleep
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("sleep is not implemented yet");
+	//panic("sleep is not implemented yet");
 	//Your Code is Here...
+	 acquire_spinlock(&(ProcessQueues.qlock));
+	    struct Env *process = get_cpu_proc();
+	    enqueue(chan, process);
+	    process->env_status=ENV_BLOCKED;
+	    release_spinlock(&(ProcessQueues.qlock));//ya hena ya el satr el tht
+	  	release_spinlock(lk);
+        sched();
+	    acquire_spinlock(lk);
+
 
 }
 
@@ -46,8 +55,26 @@ void wakeup_one(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #11] [4] LOCKS - wakeup_one
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("wakeup_one is not implemented yet");
+	//panic("wakeup_one is not implemented yet");
 	//Your Code is Here...
+
+	acquire_spinlock(&(ProcessQueues.qlock));
+	int size=queue_size(chan);
+
+    if(size!=0){
+
+	 struct Env *readyP = dequeue(chan);
+	 sched_insert_ready0(readyP);
+	 readyP->env_status=ENV_READY;
+	 release_spinlock(&(ProcessQueues.qlock));
+
+	 } else {
+		 cprinf(" no blocked processes found ");
+	  }
+
+
+
+
 }
 
 //====================================================
@@ -62,8 +89,19 @@ void wakeup_all(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #12] [4] LOCKS - wakeup_all
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("wakeup_all is not implemented yet");
+	//panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
+	acquire_spinlock(&(ProcessQueues.qlock));
+	int SizeOfQ =queue_size(chan);
+	for (int i =0 ;i<SizeOfQ;i++){
+
+
+			 struct Env *readyP = dequeue(chan);
+			 sched_insert_ready0(readyP);
+			 readyP->env_status=ENV_READY;
+
+	}
+	 release_spinlock(&(ProcessQueues.qlock));
 
 }
 
