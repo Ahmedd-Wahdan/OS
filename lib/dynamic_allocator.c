@@ -194,8 +194,114 @@ void free_block(void *va)
 {
 	//TODO: [PROJECT'24.MS1 - #07] [3] DYNAMIC ALLOCATOR - free_block
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("free_block is not implemented yet");
-	//Your Code is Here...
+//	panic("free_block is not implemented yet");
+//	Your Code is Here...
+
+/////////////////////////////////////////////////
+	//initialization we might need
+		uint32 cur_size = get_block_size(va)-2*sizeof(int);
+		uint32 *prev_footer = (uint32 *)(va - 2*sizeof(int));
+		uint32 *next_header = (uint32 *)(va + cur_size +sizeof(int));
+		uint32 prev_size = ((*prev_footer) & ~(0x1))-2*sizeof(int);
+		bool prev_is_allocated = (~(*prev_footer)) & 0x1;
+		uint32 next_size = ((*next_header) & ~(0x1))-2*sizeof(int);
+		bool next_is_allocated = (~(*next_header)) & 0x1;
+		void* prev_va = (uint32*)(va-2*sizeof(int)-prev_size);
+		void* next_va = (uint32*)(va+cur_size+2*sizeof(int));
+///////////////////////////////////////////////////
+		//exit conditions
+	if(va==NULL){return;}
+	if(get_block_size(va)==0||is_free_block(va)){return;}
+///////////////////////////////////////////////////
+
+	 //set the current block to free
+
+	//if prev and next are allocated
+	struct BlockElement *va_block = (struct BlockElement *)va;
+
+	if(prev_is_allocated==1&&next_is_allocated==1)
+	{
+		set_block_data(va,get_block_size(va),0);
+
+
+		if(LIST_EMPTY(&freeBlocksList)==1) // if the list is empty
+		{
+
+			LIST_INSERT_HEAD(&freeBlocksList,va_block);
+			return;
+		}
+
+		struct BlockElement *tmp = LIST_FIRST(&freeBlocksList);
+		bool found = 0;
+		LIST_FOREACH(tmp, &freeBlocksList)
+		{
+			if((uint32)tmp>(uint32)va)
+			{	found=1;
+				LIST_INSERT_BEFORE(&freeBlocksList,tmp,va_block);
+				return;
+			}
+		}
+		if(found==0){LIST_INSERT_TAIL(&freeBlocksList,va_block); return;}
+
+	}
+////////////////////////////////////////////////
+	if(prev_is_allocated==0&&next_is_allocated==1)
+	{
+		set_block_data(va,0,0);  //coalese with prev block and set the current meta data to zero
+		uint32 size = prev_size + cur_size + 2*sizeof(int);
+		set_block_data(prev_va,size,0);
+		return;
+	}
+
+	if(prev_is_allocated==1&&next_is_allocated==0)
+	{
+		set_block_data(next_va,0,0);
+		uint32 size = next_size + cur_size + 2*sizeof(int);
+		set_block_data(va,size,0);
+		struct BlockElement *tmp = LIST_FIRST(&freeBlocksList);        //FIRST APPROACH
+				LIST_FOREACH(tmp, &freeBlocksList)
+				{
+					if((uint32)tmp>(uint32)va)
+					{
+						LIST_INSERT_BEFORE(&freeBlocksList,tmp,va_block);
+						LIST_REMOVE(&freeBlocksList,tmp);
+						return;
+					}
+				}
+
+//		struct BlockElement *tmp = (struct BlockElement*) va;
+//		struct BlockElement *tmp2 = (struct BlockElement*) next_va;    //SECOND APPROACH
+//		LIST_INSERT_BEFORE(&freeBlocksList,tmp2,tmp);
+//		LIST_REMOVE(&freeBlocksList,tmp2);
+
+	}
+
+	if(prev_is_allocated==0&&next_is_allocated==0)
+	{
+		set_block_data(next_va,0,0);
+		set_block_data(va,0,0);
+		uint32 size = next_size + cur_size + prev_size + 2*sizeof(int);
+		set_block_data(prev_va,size,0);
+
+		struct BlockElement *tmp = LIST_FIRST(&freeBlocksList);           // FIRST APPROACH
+						LIST_FOREACH(tmp, &freeBlocksList)
+						{
+							if((uint32)tmp>(uint32)va)
+							{
+								LIST_REMOVE(&freeBlocksList,tmp);
+								return;
+							}
+						}
+
+
+//			struct BlockElement *tmp = (struct BlockElement*) next_va;    SECOND APPROACH
+//			LIST_REMOVE(&freeBlocksList,tmp);
+
+
+	}
+
+
+
 }
 
 //=========================================
