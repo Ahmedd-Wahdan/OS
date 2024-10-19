@@ -40,7 +40,7 @@ int check_block(void* va, void* expectedVA, uint32 expectedSize, uint8 expectedF
 	uint32 footer = *((uint32*)(va + expectedSize - 8));
 	uint32 expectedData = expectedSize | expectedFlag ;
 	if(header != expectedData || footer != expectedData)
-	{
+	{	cprintf("expected size = %d",expectedSize);
 		cprintf("wrong header/footer data. Expected %d, Actual H:%d F:%d\n", expectedData, header, footer);
 		return 0;
 	}
@@ -747,10 +747,12 @@ void test_free_block_FF()
 	expected_size = allocSizes[2]+allocSizes[2];
 	if (check_block(startVAs[blockIndex-1], startVAs[blockIndex-1], expected_size, 0) == 0)
 	{
+//		cprintf("incorrect meta data");
 		is_correct = 0;
 	}
 	if (check_list_size(expectedNumOfFreeBlks) == 0)
 	{
+//		cprintf("incorrect list size");
 		is_correct = 0;
 	}
 	if (is_correct)

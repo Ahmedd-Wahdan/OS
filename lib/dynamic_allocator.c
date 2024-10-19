@@ -136,16 +136,18 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 
 
 	//Your Code is Here...
-	uint32 *header = (uint32 *)(va - sizeof(int));
-	uint32 *footer = (uint32 *)(va + totalSize -  2 * sizeof(int)) ;
-	if(isAllocated == 0){
-		*header =   totalSize | 0  ;
-		*footer =   totalSize | 0  ;
-	}
-	else{
-		*header =   totalSize | 1  ;
-		*footer =   totalSize | 1  ;
-	}
+	uint32 *header = (uint32*)((char*)va - 4);
+	uint32 *footer = (uint32*)((char*)va + totalSize - 8) ;
+		if(isAllocated == 0){
+			*header =   totalSize | 0  ;
+			*footer =   totalSize | 0  ;
+		}
+		else{
+			*header =   totalSize | 1  ;
+			*footer =   totalSize | 1  ;
+		}
+//		   cprintf("Header Value: %u\n", *header);
+//		   cprintf("Footer Value: %u\n", *footer);
 }
 
 
@@ -188,6 +190,7 @@ void *alloc_block_FF(uint32 size)
 	            if (diff < 4 * sizeof(int)) {
 	                set_block_data(ra, cur_size, 1);
 	                LIST_REMOVE(&freeBlocksList, cur);
+
 	                return (void *)(ra);
 	            }
 	            else {
@@ -229,41 +232,36 @@ void free_block(void *va)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 //	panic("free_block is not implemented yet");
 //	Your Code is Here...
-	cprintf("entered free\n\n");
-	cprintf("list size = %d\n",LIST_SIZE(&freeBlocksList));
-//	cprintf("is the list empty? = %d\n",LIST_EMPTY(&freeBlocksList));
-//	print_blocks_list(freeBlocksList);
+
 ////////////////////////////////////////////////////////////////////////
 	//initialization we might need
 		uint32 cur_size = get_block_size(va)-8;
-		uint32 *prev_footer = (uint32 *)(va - 8);
-		uint32 *next_header = (uint32 *)(va + cur_size +4);
-		uint32 next_size = ((uint32)((*next_header) & ~(0x1)))-(uint32)8;
-		uint32 prev_size = ((uint32)((*prev_footer) & ~(0x1)))-(uint32)8;
+		uint32 *prev_footer = (uint32 *)((char*)va - 8);
+		uint32 *next_header = (uint32 *)((char*)va + cur_size +4);
+		uint32 prev_size = ((*prev_footer) & ~0x1) - 8;
+		uint32 next_size = ((*next_header) & ~0x1) - 8;
 		bool prev_is_allocated = (*prev_footer) & 0x1;
 		bool next_is_allocated = (*next_header) & 0x1;
-		void* prev_va = (uint32*)(va-8-prev_size);
-		void* next_va = (uint32*)(va+cur_size+8);
+		void* prev_va = (void*)((char*)va - 8 - prev_size);
+		void* next_va = (void*)((char*)va + cur_size + 8);
 ///////////////////////////////////////////////////////////////////////
 		//exit conditions
 	if(va==NULL){return;}
 	if(get_block_size(va)==0||is_free_block(va)){return;}
 //////////////////////////////////////////////////////////////////////
 
-	 //set the current block to free
-
-	//if prev and next are allocated
 	struct BlockElement *va_block = (struct BlockElement *)va;
 ////////////////////////////////////////////////////////////////////////////
 	if(prev_is_allocated==1&&next_is_allocated==1)
 	{
 
+
 		set_block_data(va,get_block_size(va),0);
-//		cprintf("list size = %d\n",LIST_SIZE(&freeBlocksList));
+
 
 		if(LIST_EMPTY(&freeBlocksList)==1) // if the list is empty
 		{
-//			cprintf("first case.1\n");
+
 			LIST_INSERT_HEAD(&freeBlocksList,va_block);
 			return;
 		}
@@ -272,7 +270,7 @@ void free_block(void *va)
 		bool found = 0;
 		LIST_FOREACH(tmp, &freeBlocksList)
 		{
-//			cprintf("first case.2\n");
+
 			if((uint32)tmp>(uint32)va)
 			{	found=1;
 				LIST_INSERT_BEFORE(&freeBlocksList,tmp,va_block);
@@ -280,67 +278,40 @@ void free_block(void *va)
 			}
 		}
 
-		if(found==0){/*cprintf("first case.3\n");*/LIST_INSERT_TAIL(&freeBlocksList,va_block); return;}
+		if(found==0){LIST_INSERT_TAIL(&freeBlocksList,va_block); return;}
 
 	}
 ////////////////////////////////////////////////////////////////////////////////////////
 	else if(prev_is_allocated==0&&next_is_allocated==1)
 	{
-//		cprintf("second case\n");
-		set_block_data(va,0,0);  //coalese with prev block and set the current meta data to zero
-		uint32 size = prev_size + cur_size + 8;
+
+		uint32 size = prev_size + cur_size + 16;
 		set_block_data(prev_va,size,0);
+		set_block_data(va,0,0);
 		return;
 	}
 /////////////////////////////////////////////////////////////////////////////////////
 	else if(prev_is_allocated==1&&next_is_allocated==0)
 	{
-//		cprintf("third case\n");
 		set_block_data(next_va,0,0);
-		uint32 size = next_size + cur_size + 8;
+		uint32 size = next_size + cur_size + 16;
 		set_block_data(va,size,0);
-		struct BlockElement *tmp = LIST_FIRST(&freeBlocksList);        //FIRST APPROACH
-				LIST_FOREACH(tmp, &freeBlocksList)
-				{
-					if((uint32)tmp>(uint32)va)     //or  tmp == next_va
-					{
-						LIST_INSERT_BEFORE(&freeBlocksList,tmp,va_block);
-						LIST_REMOVE(&freeBlocksList,tmp);
-//						print_blocks_list(freeBlocksList);
-						return;
-					}
-				}
-
-//		struct BlockElement *tmp = (struct BlockElement*) va;
-//		struct BlockElement *tmp2 = (struct BlockElement*) next_va;    //SECOND APPROACH
-//		LIST_INSERT_BEFORE(&freeBlocksList,tmp2,tmp);
-//		LIST_REMOVE(&freeBlocksList,tmp2);
+		struct BlockElement *tmp = (struct BlockElement*) va;
+		struct BlockElement *tmp2 = (struct BlockElement*) next_va;    //SECOND APPROACH
+		LIST_INSERT_BEFORE(&freeBlocksList,tmp2,tmp);
+		LIST_REMOVE(&freeBlocksList,tmp2);
 //////////////////////////////////////////////////////////////////////////////////////////////
 	}
 
 	else if(prev_is_allocated==0&&next_is_allocated==0)
 	{
-		cprintf("fourth case\n");
+
 		set_block_data(next_va,0,0);
 		set_block_data(va,0,0);
-		uint32 size = next_size + cur_size + prev_size + 8;
+		uint32 size = next_size + cur_size + prev_size + 8+16;
 		set_block_data(prev_va,size,0);
-//		cprintf("list size = %d\n",LIST_SIZE(&freeBlocksList));
-		struct BlockElement *tmp = LIST_FIRST(&freeBlocksList);           // FIRST APPROACH
-						LIST_FOREACH(tmp, &freeBlocksList)
-						{
-							if((uint32)tmp>(uint32)va)          //or   tmp == next_va
-							{
-								LIST_REMOVE(&freeBlocksList,tmp);
-//								print_blocks_list(freeBlocksList);
-//								cprintf("list size after remove = %d\n",LIST_SIZE(&freeBlocksList));
-								return;
-							}
-						}
-
-
-//			struct BlockElement *tmp = (struct BlockElement*) next_va;    SECOND APPROACH
-//			LIST_REMOVE(&freeBlocksList,tmp);
+		struct BlockElement *tmp = (struct BlockElement*) next_va;    //SECOND APPROACH
+		LIST_REMOVE(&freeBlocksList,tmp);
 
 
 	}
