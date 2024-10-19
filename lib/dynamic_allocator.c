@@ -217,10 +217,62 @@ void *alloc_block_FF(uint32 size)
 void *alloc_block_BF(uint32 size)
 {
 	//TODO: [PROJECT'24.MS1 - BONUS] [3] DYNAMIC ALLOCATOR - alloc_block_BF
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("alloc_block_BF is not implemented yet");
-	//Your Code is Here...
+	if (size == 0)
+	{
+		return NULL;
+	}
 
+	if (size % 2 != 0) size++;
+	if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
+		size = DYN_ALLOC_MIN_BLOCK_SIZE;
+
+
+	if (!is_initialized) {
+		uint32 required_size = size + 2 * sizeof(int) /*header & footer*/ + 2 * sizeof(int) /*da begin & end*/;
+		uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE) / PAGE_SIZE);
+		uint32 da_break = (uint32)sbrk(0);
+		initialize_dynamic_allocator(da_start, da_break - da_start);
+	}
+
+	struct BlockElement *min_sz_block = NULL, *curr_block = NULL;
+	uint32 total_sz = size + 2 * sizeof(int), min_sz = (uint32)-1;
+	LIST_FOREACH(curr_block, &freeBlocksList)
+	{
+		uint32 curr_block_sz = get_block_size(curr_block);
+
+		if(curr_block_sz < min_sz && curr_block_sz >= total_sz)
+			min_sz_block = curr_block, min_sz = curr_block_sz;
+	}
+
+	if(!min_sz_block) // If no free blocks fit, grow heap
+	{
+//		uint32 da_start = (uint32)sbrk(ROUNDUP(size + 4 * sizeof(int), PAGE_SIZE) / PAGE_SIZE);
+//		uint32 da_break = (uint32)sbrk(0);
+//		initialize_dynamic_allocator(da_start, da_break - da_start);
+//		return alloc_block_BF(size);
+		return NULL;
+	}
+
+	void *ra = (void *)min_sz_block;
+	uint32 remaining_space = min_sz - total_sz;
+	if(remaining_space <= 4 * sizeof(int))
+	{ // There is small to no space remaining
+	  // min_sz will be equal to the exact space we need
+		set_block_data(ra, min_sz, 1);
+	}
+	else
+	{ // Split the free block
+		set_block_data(ra, total_sz, 1);
+
+		void *nextVa = ra + total_sz;
+		set_block_data(nextVa, remaining_space, 0);
+
+		LIST_INSERT_AFTER(&freeBlocksList, min_sz_block, (struct BlockElement *)nextVa);
+	}
+
+	LIST_REMOVE(&freeBlocksList, min_sz_block);
+
+	return ra;
 }
 
 //===================================================
