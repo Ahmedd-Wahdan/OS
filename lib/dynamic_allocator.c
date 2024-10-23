@@ -120,9 +120,6 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 
 	LIST_INIT(&freeBlocksList);
 	LIST_INSERT_HEAD(&freeBlocksList, firstBlock);
-	cprintf("elements after initialization");
-	print_blocks_list(freeBlocksList);
-
 
 }
 //==================================
@@ -159,57 +156,62 @@ void *alloc_block_FF(uint32 size)
 	//==================================================================================
 	//DON'T CHANGE THESE LINES==========================================================
 	//==================================================================================
-	if (size == 0) {
-	        return NULL;
-	    }
+	if (size <= 0)
+	{
+		return NULL;
+	}
 
-	    if (size % 2 != 0) size++;
-	    if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
-	        size = DYN_ALLOC_MIN_BLOCK_SIZE;
+	if (size % 2 != 0)
+	{
+		size++;
+	}
+	if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
+	{
+		size = DYN_ALLOC_MIN_BLOCK_SIZE;
+	}
 
+	if (!is_initialized)
+	{
+		uint32 required_size = size + 2 * sizeof(int) /*header & footer*/ + 2 * sizeof(int) /*da begin & end*/;
+		uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE) / PAGE_SIZE);
+		uint32 da_break = (uint32)sbrk(0);
+		initialize_dynamic_allocator(da_start, da_break - da_start);
+	}
 
-	    if (!is_initialized) {
-	        uint32 required_size = size + 2 * sizeof(int) /*header & footer*/ + 2 * sizeof(int) /*da begin & end*/;
-	        uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE) / PAGE_SIZE);
-	        uint32 da_break = (uint32)sbrk(0);
-	        initialize_dynamic_allocator(da_start, da_break - da_start);
-	    }
+	uint32 total_size = size + 2 * sizeof(int);
+	struct BlockElement *cur;
 
-	    uint32 total_size = size + 2 * sizeof(int);
-	    struct BlockElement *cur;
+	void *ra;
 
-	    void *ra;
+	LIST_FOREACH(cur, &freeBlocksList)
+	{
+		uint32 cur_size = get_block_size(cur);
+	    if (cur_size >= total_size)
+	    {
+	    	uint32 diff = cur_size - total_size;
+	        ra = (void *)cur;
 
-	    LIST_FOREACH(cur, &freeBlocksList) {
-	        uint32 cur_size = get_block_size(cur);
-	        if (cur_size >= total_size) {
+	        if (diff < 4 * sizeof(int))
+	        {
+	        	set_block_data(ra, cur_size, 1);
+	        	LIST_REMOVE(&freeBlocksList, cur);
+	        	return (void *)(ra);
+	        }
+	        else
+	        {
+	        	set_block_data(ra, total_size, 1);
 
-	            uint32 diff = cur_size - total_size;
-	            ra = (void *)cur;
+	        	void *nextVa = ra + total_size;
 
-	            if (diff < 4 * sizeof(int)) {
-	                set_block_data(ra, cur_size, 1);
-	                LIST_REMOVE(&freeBlocksList, cur);
+	        	set_block_data(nextVa, diff, 0);
 
-	                return (void *)(ra);
-	            }
-	            else {
-	                set_block_data(ra, total_size, 1);
-
-	                void *nextVa = ra + total_size;
-
-	                set_block_data(nextVa, diff, 0);
-
-	                LIST_INSERT_AFTER(&freeBlocksList, cur, (struct BlockElement *)nextVa);
-	                LIST_REMOVE(&freeBlocksList, cur);
-	                return (void *)(ra);
-	            }
+	        	LIST_INSERT_AFTER(&freeBlocksList, cur, (struct BlockElement *)nextVa);
+	            LIST_REMOVE(&freeBlocksList, cur);
 	        }
 	    }
+	}
 
-	  return NULL;
-
-
+	return NULL;
 }
 //=========================================
 // [4] ALLOCATE BLOCK BY BEST FIT:
@@ -217,7 +219,7 @@ void *alloc_block_FF(uint32 size)
 void *alloc_block_BF(uint32 size)
 {
 	//TODO: [PROJECT'24.MS1 - BONUS] [3] DYNAMIC ALLOCATOR - alloc_block_BF
-	if (size == 0)
+	if (size <= 0)
 	{
 		return NULL;
 	}
@@ -254,7 +256,7 @@ void *alloc_block_BF(uint32 size)
 
 	void *ra = (void *)min_sz_block;
 	uint32 remaining_space = min_sz - total_sz;
-	if(remaining_space <= 4 * sizeof(int))
+	if(remaining_space < 4 * sizeof(int))
 	{
 		set_block_data(ra, min_sz, 1);
 	}
@@ -280,35 +282,31 @@ void free_block(void *va)
 {
 	//TODO: [PROJECT'24.MS1 - #07] [3] DYNAMIC ALLOCATOR - free_block
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-//	panic("free_block is not implemented yet");
-//	Your Code is Here...
+	//	panic("free_block is not implemented yet");
+	//	Your Code is Here...
 
-////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////
 	//initialization we might need
-		uint32 cur_size = get_block_size(va)-8;
-		uint32 *prev_footer = (uint32 *)((char*)va - 8);
-		uint32 *next_header = (uint32 *)((char*)va + cur_size +4);
-		uint32 prev_size = ((*prev_footer) & ~0x1) - 8;
-		uint32 next_size = ((*next_header) & ~0x1) - 8;
-		bool prev_is_allocated = (*prev_footer) & 0x1;
-		bool next_is_allocated = (*next_header) & 0x1;
-		void* prev_va = (void*)((char*)va - 8 - prev_size);
-		void* next_va = (void*)((char*)va + cur_size + 8);
-///////////////////////////////////////////////////////////////////////
-		//exit conditions
+	uint32 cur_size = get_block_size(va)-8;
+	uint32 *prev_footer = (uint32 *)((char*)va - 8);
+	uint32 *next_header = (uint32 *)((char*)va + cur_size +4);
+	uint32 prev_size = ((*prev_footer) & ~0x1) - 8;
+	uint32 next_size = ((*next_header) & ~0x1) - 8;
+	bool prev_is_allocated = (*prev_footer) & 0x1;
+	bool next_is_allocated = (*next_header) & 0x1;
+	void* prev_va = (void*)((char*)va - 8 - prev_size);
+	void* next_va = (void*)((char*)va + cur_size + 8);
+	///////////////////////////////////////////////////////////////////////
+	//exit conditions
 	if(va==NULL){return;}
 	if(get_block_size(va)==0||is_free_block(va)){return;}
-//////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////
 
 	struct BlockElement *va_block = (struct BlockElement *)va;
-////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////
 	if(prev_is_allocated==1&&next_is_allocated==1)
 	{
-
-
 		set_block_data(va,get_block_size(va),0);
-
-
 		if(LIST_EMPTY(&freeBlocksList)==1) // if the list is empty
 		{
 
@@ -320,27 +318,22 @@ void free_block(void *va)
 		bool found = 0;
 		LIST_FOREACH(tmp, &freeBlocksList)
 		{
-
 			if((uint32)tmp>(uint32)va)
 			{	found=1;
 				LIST_INSERT_BEFORE(&freeBlocksList,tmp,va_block);
 				return;
 			}
 		}
-
 		if(found==0){LIST_INSERT_TAIL(&freeBlocksList,va_block); return;}
-
 	}
-////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////
 	else if(prev_is_allocated==0&&next_is_allocated==1)
 	{
-
 		uint32 size = prev_size + cur_size + 16;
 		set_block_data(prev_va,size,0);
 		set_block_data(va,0,0);
-		return;
 	}
-/////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////
 	else if(prev_is_allocated==1&&next_is_allocated==0)
 	{
 		set_block_data(next_va,0,0);
@@ -350,24 +343,20 @@ void free_block(void *va)
 		struct BlockElement *tmp2 = (struct BlockElement*) next_va;    //SECOND APPROACH
 		LIST_INSERT_BEFORE(&freeBlocksList,tmp2,tmp);
 		LIST_REMOVE(&freeBlocksList,tmp2);
-//////////////////////////////////////////////////////////////////////////////////////////////
 	}
-
+	//////////////////////////////////////////////////////////////////////////////////////////////
 	else if(prev_is_allocated==0&&next_is_allocated==0)
 	{
-
 		set_block_data(next_va,0,0);
 		set_block_data(va,0,0);
 		uint32 size = next_size + cur_size + prev_size + 8+16;
 		set_block_data(prev_va,size,0);
 		struct BlockElement *tmp = (struct BlockElement*) next_va;    //SECOND APPROACH
 		LIST_REMOVE(&freeBlocksList,tmp);
-
-
 	}
-//////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////
 
-
+	return;
 }
 
 //=========================================
@@ -379,6 +368,9 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		//COMMENT THE FOLLOWING LINE BEFORE START CODING
 		//panic("realloc_block_FF is not implemented yet");
 		//Your Code is Here...
+
+
+
 		if (new_size <= 0)
 		{
 			if(va != NULL)

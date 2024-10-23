@@ -1212,6 +1212,162 @@ void test_free_block_NF()
 	panic("not implemented");
 }
 
+void test_realloc_block_FF_COMPLETE(){
+#if USE_KHEAP
+	panic("test_free_block: the kernel heap should be disabled. make sure USE_KHEAP = 0");
+	return;
+#endif
+
+		//panic("this is UNSEEN test");
+
+		//_____________________________FirstTest >>  NEW SIZE == TO THE ACTUAL BLOCK SIZE________________________________
+		int evall = 0;
+		bool success = 1;
+
+		cprintf("\n\n   5: Test calling realloc with equal sizes.[20%]\n\n") ;
+		cprintf("      5.1: next block is full or not (should return the same address)\n\n") ;
+
+		void *actualVa;
+		void *expectedVa;
+		uint32 initAllocatedSpacee = 108;
+		initialize_dynamic_allocator(KERNEL_HEAP_START, initAllocatedSpacee);
+
+	    int	numberOfBlocks = 5;
+	    uint32 size = (initAllocatedSpacee - 8) / numberOfBlocks;
+
+	    void* arr[numberOfBlocks];
+
+	    for(int i = 0 ; i < numberOfBlocks ; ++i)
+	    {
+	    	arr[i]  = alloc_block_FF(size - 8);
+	    }
+
+	    for(int i = 0 ; i < numberOfBlocks ; ++i)
+	    {
+	    	expectedVa = arr[i];
+	    	uint32 expectedSize = get_block_size(expectedVa) - 8;
+	    	actualVa = realloc_block_FF(expectedVa,expectedSize);
+	    	if(check_block(actualVa, expectedVa, expectedSize + 8, 1) == 0)
+	    	{
+	    		success = 0;
+	    		cprintf("      Test 5.1.1 of reallocating a block with the same size as its current size has failed\n\n");
+	    		break;
+	    	}
+	    }
+
+
+	    if(success == 1)
+	    {
+	    	evall += 20;
+	    	cprintf("\n   Test 5 realloc_block with FIRST FIT completed. Evaluation = %d%\n\n", evall);
+	    }
+
+	    //_________________________SecondTest >>  NEW SIZE is bigger than  THE ACTUAL BLOCK SIZE_________________________
+	    cprintf("   6: Test calling realloc with increasing sizes.[40%]\n\n") ;
+	    cprintf("      6.1: next block is full (should call alloc )\n\n") ;
+
+	    for(int i = 0 ; i < numberOfBlocks ; ++i)
+	    {
+	    	actualVa = realloc_block_FF(arr[i], size + 5 - 8);
+	    	alloc_block_FF(size - 8);
+	    	if(actualVa != NULL)
+	    	{
+	    		success = 0;
+	    		cprintf("      Test 6.1.1 of reallocating a block with bigger size  has failed\n");
+	    		break;
+	    	}
+	    }
+
+	    if(success == 1)
+	    {
+	    	evall += 20;
+	    	cprintf("\n   Test 6.1 realloc_block with FIRST FIT completed. Evaluation = %d%\n\n", evall);
+	    }
+
+	    cprintf("\n   6.2: next block is empty but smaller in size (should call alloc )\n\n") ;
+	    for(int i = 0 ; i < numberOfBlocks ; ++i)
+	    {
+	    	if(i % 2 != 0)
+	    	{
+	    		free_block(arr[i]);
+	    	}
+	    }
+
+	    for(int i = 0 ; i < numberOfBlocks ; ++i)
+	    {
+	    	if(i % 2 == 0)
+	    	{
+		    	actualVa = realloc_block_FF(arr[i], 2 * size  + 1 - 8);
+		    	if(actualVa != NULL)
+		    	{
+		    		success = 0;
+		    		cprintf("      Test 6.2.1 of reallocating a block with bigger size  has failed\n");
+		    		break;
+		    	}
+	    	}
+	    	alloc_block_FF(size - 8);
+	    }
+
+	    if(success == 1)
+	    {
+	    	evall += 20;
+	    	cprintf("   Test 6.2 realloc_block with FIRST FIT completed. Evaluation = %d%\n\n", evall);
+	    }
+
+
+	    //________________________ThirdTest >>  NEW SIZE is Smaller than  THE ACTUAL BLOCK SIZE___________________________
+	    cprintf("   7: Test calling realloc with smaller sizes.[40%]\n\n") ;
+	    cprintf("      7.1: next block is empty (should merge the next free with the remaining)\n\n") ;
+	    for(int i = 0 ; i < numberOfBlocks ; ++i)
+	    {
+	    	if(i % 2 != 0)
+	    	{
+	    		free_block(arr[i]);
+	    	}
+	    }
+
+	    int diff = 4 , newSize = size - diff;
+	    for(int i = 0 ; i < numberOfBlocks - 1 ; ++i)
+	    {
+	    	if(i % 2 == 0)
+	    	{
+	    		expectedVa =  arr[i];
+		    	actualVa = realloc_block_FF(arr[i],  newSize - 8);
+
+		    	if(check_block(actualVa,expectedVa,newSize,1) == 0)
+		    	{
+		    		success = 0;
+		    		cprintf("      Test 7.1.1 of reallocating a block with smaller size  has failed\n");
+		    		break;
+	    	    }
+		    	//______check on the merge_______
+		    	if(i != numberOfBlocks - 2)
+		    	{
+		    		arr[i + 1] = arr[i + 1] - diff;
+		    	}
+	    	}
+	    	else
+	    	{
+	    		int expectedSize = size + diff ;
+	    		int actualSize = (int)get_block_size(arr[i]);
+	    		if(actualSize != expectedSize)
+	    		{
+	    			success = 0;
+	    			cprintf("      7.1.2: Reallocating a block to a smaller size failed because the content of the merged block is incorrect.\n");
+	    			break;
+	    		}
+	    	}
+	    }
+
+	    if(success == 1)
+	    {
+	    	evall += 40;
+	    	cprintf("   Congratulations! You have passed all of the tests. Evaluation = %d%\n", evall);
+	    }
+
+	    return;
+}
+
 void test_realloc_block_FF()
 {
 #if USE_KHEAP
@@ -1244,7 +1400,7 @@ void test_realloc_block_FF()
 	int totalSizes = 0;
 	for (int i = 0; i < numOfAllocs; ++i)
 	{
-		totalSizes += allocSizes[i] * allocCntPerSize ;
+		totalSizes += allocSizes[i] * allocCntPerSize;
 	}
 	int remainSize = initAllocatedSpace - totalSizes - 2*sizeof(int) ; //exclude size of "DA Begin & End" blocks
 	if (remainSize <= 0)
@@ -1504,19 +1660,14 @@ void test_realloc_block_FF()
 
 	cprintf("[PARTIAL] test realloc_block with FIRST FIT completed. Evaluation = %d%\n", eval);
 
-}
 
 
-void test_realloc_block_FF_COMPLETE()
-{
-#if USE_KHEAP
-	panic("test_free_block: the kernel heap should be disabled. make sure USE_KHEAP = 0");
-	return;
-#endif
-
-	panic("this is UNSEEN test");
+	test_realloc_block_FF_COMPLETE();
 
 }
+
+
+
 
 
 /********************Helper Functions***************************/
