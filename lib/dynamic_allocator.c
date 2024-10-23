@@ -236,32 +236,30 @@ void *alloc_block_BF(uint32 size)
 
 	struct BlockElement *min_sz_block = NULL, *curr_block = NULL;
 	uint32 total_sz = size + 2 * sizeof(int), min_sz = (uint32)-1;
+
 	LIST_FOREACH(curr_block, &freeBlocksList)
 	{
 		uint32 curr_block_sz = get_block_size(curr_block);
 
 		if(curr_block_sz < min_sz && curr_block_sz >= total_sz)
+		{
 			min_sz_block = curr_block, min_sz = curr_block_sz;
+		}
 	}
 
-	if(!min_sz_block) // If no free blocks fit, grow heap
+	if(!min_sz_block)
 	{
-//		uint32 da_start = (uint32)sbrk(ROUNDUP(size + 4 * sizeof(int), PAGE_SIZE) / PAGE_SIZE);
-//		uint32 da_break = (uint32)sbrk(0);
-//		initialize_dynamic_allocator(da_start, da_break - da_start);
-//		return alloc_block_BF(size);
 		return NULL;
 	}
 
 	void *ra = (void *)min_sz_block;
 	uint32 remaining_space = min_sz - total_sz;
 	if(remaining_space <= 4 * sizeof(int))
-	{ // There is small to no space remaining
-	  // min_sz will be equal to the exact space we need
+	{
 		set_block_data(ra, min_sz, 1);
 	}
 	else
-	{ // Split the free block
+	{
 		set_block_data(ra, total_sz, 1);
 
 		void *nextVa = ra + total_sz;
@@ -378,9 +376,124 @@ void free_block(void *va)
 void *realloc_block_FF(void* va, uint32 new_size)
 {
 	//TODO: [PROJECT'24.MS1 - #08] [3] DYNAMIC ALLOCATOR - realloc_block_FF
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("realloc_block_FF is not implemented yet");
-	//Your Code is Here...
+		//COMMENT THE FOLLOWING LINE BEFORE START CODING
+		//panic("realloc_block_FF is not implemented yet");
+		//Your Code is Here...
+		if (new_size <= 0)
+		{
+			if(va != NULL)
+			{
+				free_block(va);
+			}
+			return NULL;
+		}
+
+		if (new_size % 2 != 0) new_size++;
+
+		if (new_size < DYN_ALLOC_MIN_BLOCK_SIZE)
+		{
+			new_size = DYN_ALLOC_MIN_BLOCK_SIZE;
+		}
+
+		if(va == NULL)
+		{
+			return alloc_block_FF(new_size);
+		}
+
+		int size = new_size + 2 * sizeof(int);
+		int old_size = get_block_size(va);
+
+		if(size == old_size)
+		{
+			return va;
+		}
+		else if(size < old_size)
+		{
+
+			set_block_data(va, size, 1);
+
+			void *next_va = (char *)va + old_size;
+
+			int next_size = get_block_size(next_va);
+
+			bool next_is_free = is_free_block(next_va);
+
+			if(next_is_free)
+			{
+				int next_new_size = old_size-size+next_size;
+				void *next_new_va= (char *)va+size;
+				set_block_data(next_new_va, next_new_size, 0);
+				LIST_INSERT_BEFORE(&freeBlocksList, (struct BlockElement *)next_va, (struct BlockElement *)next_new_va);
+				LIST_REMOVE(&freeBlocksList, (struct BlockElement *)next_va);
+				return va;
+			}
+			else
+			{
+				int next_new_size = old_size - size;
+				if(next_new_size < 4 * sizeof(int))
+				{
+					set_block_data(va, old_size, 1);
+					return va;
+				}
+				else
+				{
+					set_block_data(va, size, 1);
+					void *next_new_va = (char*)va + size;
+					set_block_data(next_new_va, old_size - size, 0);
+
+					struct BlockElement *block = LIST_FIRST(&freeBlocksList);
+
+					LIST_FOREACH(block, &freeBlocksList)
+					{
+
+						if((uint32)next_new_va < (uint32)block)
+						{
+							LIST_INSERT_BEFORE(&freeBlocksList, block, (struct BlockElement *)next_new_va);
+							return va;
+						}
+					}
+
+					LIST_INSERT_TAIL(&freeBlocksList, (struct BlockElement *)next_new_va);
+
+					return va;
+				}
+			}
+		}
+		else if(size > old_size)
+		{
+
+			void *next_va = (char *)va + old_size;
+
+			bool next_is_free = is_free_block(next_va);
+
+			int next_size = get_block_size(next_va);
+
+			int total_size_after_merging = old_size + next_size;
+
+			if(next_is_free && total_size_after_merging >= size)
+			{
+				if(total_size_after_merging - size < 4 * sizeof(int))
+				{
+					set_block_data(va, total_size_after_merging, 1);
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement *)next_va);
+				}
+				else
+				{
+					set_block_data(va, size, 1);
+					void *next_new_va = (char *)va + size;
+					set_block_data(next_new_va, total_size_after_merging - size, 0);
+					LIST_INSERT_AFTER(&freeBlocksList, (struct BlockElement *)next_va, (struct BlockElement *)next_new_va);
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement *)next_va);
+				}
+			}
+			else
+			{
+				free_block(va);
+				return alloc_block_FF(new_size);
+			}
+
+		}
+		return va;
 }
 
 /*********************************************************************************************/
