@@ -195,7 +195,6 @@ void *alloc_block_FF(uint32 size)
 	        {
 	        	set_block_data(ra, cur_size, 1);
 	        	LIST_REMOVE(&freeBlocksList, cur);
-	        	return (void *)(ra);
 	        }
 	        else
 	        {
@@ -208,6 +207,7 @@ void *alloc_block_FF(uint32 size)
 	        	LIST_INSERT_AFTER(&freeBlocksList, cur, (struct BlockElement *)nextVa);
 	            LIST_REMOVE(&freeBlocksList, cur);
 	        }
+	        return (void *)(ra);
 	    }
 	}
 
