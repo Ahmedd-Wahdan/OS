@@ -66,6 +66,7 @@ void release_sleeplock(struct sleeplock *lk)
 
 	wakeup_all(&(lk->chan));
 	lk->locked=0;
+	lk->pid = 0;
 	release_spinlock(&(lk->lk));
 
 
