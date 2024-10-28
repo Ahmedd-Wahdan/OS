@@ -332,6 +332,7 @@ void free_block(void *va)
 		uint32 size = prev_size + cur_size + 16;
 		set_block_data(prev_va,size,0);
 		set_block_data(va,0,0);
+		return;
 	}
 	/////////////////////////////////////////////////////////////////////////////////////
 	else if(prev_is_allocated==1&&next_is_allocated==0)
@@ -343,6 +344,7 @@ void free_block(void *va)
 		struct BlockElement *tmp2 = (struct BlockElement*) next_va;    //SECOND APPROACH
 		LIST_INSERT_BEFORE(&freeBlocksList,tmp2,tmp);
 		LIST_REMOVE(&freeBlocksList,tmp2);
+		return;
 	}
 	//////////////////////////////////////////////////////////////////////////////////////////////
 	else if(prev_is_allocated==0&&next_is_allocated==0)
@@ -353,6 +355,7 @@ void free_block(void *va)
 		set_block_data(prev_va,size,0);
 		struct BlockElement *tmp = (struct BlockElement*) next_va;    //SECOND APPROACH
 		LIST_REMOVE(&freeBlocksList,tmp);
+		return;
 	}
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
