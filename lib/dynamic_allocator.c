@@ -129,7 +129,7 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 {
 	//TODO: [PROJECT'24.MS1 - #05] [3] DYNAMIC ALLOCATOR - set_block_data
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-//	panic("set_block_data is not implemented yet");
+    //panic("set_block_data is not implemented yet");
 
 
 	//Your Code is Here...
@@ -143,8 +143,6 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 			*header =   totalSize | 1  ;
 			*footer =   totalSize | 1  ;
 		}
-//		   cprintf("Header Value: %u\n", *header);
-//		   cprintf("Footer Value: %u\n", *footer);
 }
 
 

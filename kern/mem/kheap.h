@@ -8,6 +8,23 @@
 #include <inc/types.h>
 
 
+
+//Block Allocator Limits
+
+uint32 START;
+uint32 SEGEMENT_BREAK;
+uint32 HARD_LIMIT;
+
+static inline void setStartLimit(uint32 start_address){ START = start_address;}
+static inline void setSegementBrk(uint32 segement_break){ SEGEMENT_BREAK = segement_break;}
+static inline void setHardLimit(uint32 hard_limit){ HARD_LIMIT = hard_limit;}
+
+static inline uint32 getStartLimit(){return START;}
+static inline uint32 getSBrk(){return SEGEMENT_BREAK;}
+static inline uint32 getHardLimit(){return HARD_LIMIT;}
+
+//Block Allocator Limits
+
 /*2017*/
 uint32 _KHeapPlacementStrategy;
 //Values for user heap placement strategy
@@ -29,6 +46,7 @@ static inline uint8 isKHeapPlacementStrategyBESTFIT(){if(_KHeapPlacementStrategy
 static inline uint8 isKHeapPlacementStrategyNEXTFIT(){if(_KHeapPlacementStrategy == KHP_PLACE_NEXTFIT) return 1; return 0;}
 static inline uint8 isKHeapPlacementStrategyWORSTFIT(){if(_KHeapPlacementStrategy == KHP_PLACE_WORSTFIT) return 1; return 0;}
 
+
 //***********************************
 
 void* kmalloc(unsigned int size);
@@ -41,7 +59,7 @@ unsigned int kheap_physical_address(unsigned int virtual_address);
 int numOfKheapVACalls ;
 
 
-//[PROJECT'24.MS2] add suitable code here
+//TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - add suitable code here
 
 
 #endif // FOS_KERN_KHEAP_H_
