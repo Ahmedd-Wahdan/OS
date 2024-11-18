@@ -13,8 +13,6 @@
 int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
 {
 	 //TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
-    // Write your code here, remove the panic and write your code
-   //panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
 
 	initSizeToAllocate = ROUNDUP(initSizeToAllocate, PAGE_SIZE);
 	if(initSizeToAllocate + daStart > daLimit)
@@ -31,13 +29,15 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 		        map_frame(ptr_page_directory, frame_info, virtual_address, PERM_PRESENT  | PERM_WRITEABLE);
 		    }
 		 else{
+			 for (uint32 allocated_va = daStart; allocated_va < virtual_address; allocated_va += PAGE_SIZE){
+				 unmap_frame(ptr_page_directory,allocated_va);
+			 }
 			 panic(" **Error While Initializing kheap Dynamic Allocator** ");
 		 }
 	}
 
 	initialize_dynamic_allocator(daStart, initSizeToAllocate);
 	return 0 ;
-
 }
 
 void* sbrk(int numOfPages)
@@ -53,12 +53,38 @@ void* sbrk(int numOfPages)
 	 */
 
 	//MS2: COMMENT THIS LINE BEFORE START CODING==========
-	return (void*)-1 ;
+	//return (void*)-1 ;
 	//====================================================
 
-	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
-	// Write your code here, remove the panic and write your code
-	panic("sbrk() is not implemented yet...!!");
+	// TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
+
+	uint32 size = numOfPages * PAGE_SIZE;
+	uint32 hard_limit = getHardLimit();
+	uint32 old_s_brk = getSBrk();
+	uint32 new_s_brk = old_s_brk + size;
+
+	if(size == 0)
+		return (void*)old_s_brk;
+	if(new_s_brk > hard_limit)
+		return(void*) -1;
+	else{
+		for (uint32 va = old_s_brk; va < new_s_brk; va += PAGE_SIZE){
+			struct FrameInfo *frame_info;
+			if(allocate_frame(&frame_info) == 0) {
+				map_frame(ptr_page_directory, frame_info, va, PERM_PRESENT  | PERM_WRITEABLE);
+			}
+			else{
+				for (uint32 allocated_va = old_s_brk; allocated_va < va; allocated_va += PAGE_SIZE){
+					unmap_frame(ptr_page_directory,allocated_va);
+				}
+				return(void*) -1;
+				 }
+			}
+	}
+
+	setSegementBrk(new_s_brk);
+	return (void*) old_s_brk;
+
 }
 
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator

@@ -10,7 +10,6 @@
 
 
 //Block Allocator Limits
-
 uint32 START;
 uint32 SEGEMENT_BREAK;
 uint32 HARD_LIMIT;
@@ -22,8 +21,7 @@ static inline void setHardLimit(uint32 hard_limit){ HARD_LIMIT = hard_limit;}
 static inline uint32 getStartLimit(){return START;}
 static inline uint32 getSBrk(){return SEGEMENT_BREAK;}
 static inline uint32 getHardLimit(){return HARD_LIMIT;}
-
-//Block Allocator Limits
+//________________________
 
 /*2017*/
 uint32 _KHeapPlacementStrategy;
