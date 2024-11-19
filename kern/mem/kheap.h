@@ -6,8 +6,11 @@
 #endif
 
 #include <inc/types.h>
+#include <inc/memlayout.h>
+#include <inc/dynamic_allocator.h>
+#include "memory_manager.h"
 
-
+//#define MAX_NUM_OF_PAGES (KERNEL_HEAP_MAX - (HARD_LIMIT+PAGE_SIZE)) / PAGE_SIZE
 
 //Block Allocator Limits
 uint32 START;
@@ -58,6 +61,10 @@ int numOfKheapVACalls ;
 
 
 //TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - add suitable code here
+
+#define MAX_NUM_OF_PAGES (KERNEL_HEAP_MAX - KERNEL_HEAP_START) / PAGE_SIZE
+
+
 
 
 #endif // FOS_KERN_KHEAP_H_
