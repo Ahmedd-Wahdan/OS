@@ -866,14 +866,34 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 {
 #if USE_KHEAP
 	//TODO: [PROJECT'24.MS2 - #07] [2] FAULT HANDLER I - create_user_kern_stack
-	// Write your code here, remove the panic and write your code
-	panic("create_user_kern_stack() is not implemented yet...!!");
 
 	//allocate space for the user kernel stack.
 	//remember to leave its bottom page as a GUARD PAGE (i.e. not mapped)
 	//return a pointer to the start of the allocated space (including the GUARD PAGE)
 	//On failure: panic
 
+//	uint32 num_of_pages = (KERNEL_STACK_SIZE + (PAGE_SIZE - 1)) / PAGE_SIZE;
+//
+//	for(uint32 i = 0; i < num_of_pages; i++)
+//	{
+//		uint32 va = KERN_STACK_TOP - (PAGE_SIZE * (i + 1));
+//		create_page_table(ptr_user_page_directory, va);
+//
+//		struct FrameInfo* frame;
+//		if(allocate_frame(&frame) != 0) panic("Failed to allocate frame for user kernel stack!");
+//
+//		if(map_frame(ptr_user_page_directory, frame, va, PERM_WRITEABLE | PERM_PRESENT) != 0) panic("Failed to map frame for user kernel stack!");
+//	}
+//
+//	uint32 guard_va = KERN_STACK_TOP - KERNEL_STACK_SIZE;
+//	pt_set_page_permissions(ptr_user_page_directory, guard_va, 0, PERM_PRESENT);
+//
+//	return (void*)(KERN_STACK_TOP - PAGE_SIZE);
+
+	struct Env* e;
+	e = (struct Env*)kmalloc(KERNEL_STACK_SIZE);
+	unmap_frame(ptr_user_page_directory, (uint32)&(e->kstack));
+	return e;
 
 #else
 	if (KERNEL_HEAP_MAX - __cur_k_stk < KERNEL_STACK_SIZE)
@@ -881,9 +901,11 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	void* kstack = (void*) __cur_k_stk;
 	__cur_k_stk += KERNEL_STACK_SIZE;
 	return kstack ;
-//	panic("KERNEL HEAP is OFF! user kernel stack is not supported");
+	panic("KERNEL HEAP is OFF! user kernel stack is not supported");
 #endif
 }
+
+
 
 /*2024*/
 //===========================================================

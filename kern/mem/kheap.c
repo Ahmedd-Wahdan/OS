@@ -21,7 +21,6 @@ struct pages Pages_arr[MAX_NUM_OF_PAGES];
 
 
 
-
 //Initialize the dynamic allocator of kernel heap with the given start address, size & limit
 //All pages in the given range should be allocated
 //Remember: call the initialize_dynamic_allocator(..) to complete the initialization
@@ -47,10 +46,12 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 		struct FrameInfo *frame_info;
 		 if(allocate_frame(&frame_info) == 0) {
 		        map_frame(ptr_page_directory, frame_info, virtual_address, PERM_PRESENT  | PERM_WRITEABLE);
-		    }
+		        frame_info->bufferedVA=virtual_address;
+		 }
 		 else{
 			 for (uint32 allocated_va = daStart; allocated_va < virtual_address; allocated_va += PAGE_SIZE){
 				 unmap_frame(ptr_page_directory,allocated_va);
+
 			 }
 			 panic(" **Error While Initializing kheap Dynamic Allocator** ");
 		 }
@@ -92,6 +93,7 @@ void* sbrk(int numOfPages)
 				struct FrameInfo *frame_info;
 				 if(allocate_frame(&frame_info) == 0) {
 				        map_frame(ptr_page_directory, frame_info, va, PERM_PRESENT  | PERM_WRITEABLE);
+				        frame_info->bufferedVA=va;
 				    }
 				 else{
 					 for (uint32 allocated_va = old_s_brk; allocated_va < va; allocated_va += PAGE_SIZE){
@@ -108,108 +110,93 @@ void* sbrk(int numOfPages)
 }
 
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
-
 void* kmalloc(unsigned int size)
 {
-
     //[PROJECT'24.MS2] Implement this function
     // Write your code here, remove the panic and write your code
     // kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
     // Use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
-if(isKHeapPlacementStrategyFIRSTFIT()){
+    if (isKHeapPlacementStrategyFIRSTFIT()) {
 
-int max_size = KERNEL_HEAP_MAX-(HARD_LIMIT+PAGE_SIZE);
-//int allocated = new_sbrk - (HARD_LIMIT+PAGE_SIZE);
-if (size>max_size||size >(getHardLimit()-getSBrk())||size ==0){
-    		return NULL;}
+        int max_size = KERNEL_HEAP_MAX - (HARD_LIMIT + PAGE_SIZE);
 
+        if (size == 0||size>max_size) {
+            return NULL;
+        }
 
-if (size <= DYN_ALLOC_MAX_BLOCK_SIZE) {
-        return alloc_block_FF((uint32)size);
-    }
+        if (size <= DYN_ALLOC_MAX_BLOCK_SIZE) {
 
+            return alloc_block_FF((uint32) size);
 
-    int pgs_needed = ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
+        }
 
+        int pgs_needed = ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
 
-     int count_wrabaad=0;
-          int firstpg=-1;
-        for (int i = 0; i < ((KERNEL_HEAP_MAX - (HARD_LIMIT+PAGE_SIZE)) / PAGE_SIZE); i++) {
-        	if(count_wrabaad>=pgs_needed)
-        	{
-        		firstpg=i-pgs_needed;
-        		break;
-        	}
-        	if(Pages_arr[i].allocated == 0)
-        	{
-        		count_wrabaad++;
-        	}else{
-        		count_wrabaad=0;
-        		continue;
-        	}
-}
+        int count_wrabaad = 0;
+        int firstpg = -1;
+        uint32 MAX_PAGES = (KERNEL_HEAP_MAX - (getHardLimit() + PAGE_SIZE)) / PAGE_SIZE;
+        for(uint32 i = 0; i < MAX_PAGES; i++){
+                	if(Pages_arr[i].allocated == 0)
+                	{
+                		if(count_wrabaad == 0)
+                		{
+                			firstpg = i;
+                		}
 
-if (count_wrabaad<pgs_needed){
-return NULL;
-}
-        	uint32 va_start_address = HARD_LIMIT + PAGE_SIZE + (firstpg * PAGE_SIZE);
+                		count_wrabaad++;
 
-            uint32 va = va_start_address;
-
-
-                for (int i = firstpg; i <firstpg + pgs_needed; i++) {
-
-
-                    struct FrameInfo *frame;
-
-                    if (allocate_frame(&frame) == 0) {
-
-                        map_frame(ptr_page_directory, frame, va, PERM_PRESENT | PERM_WRITEABLE);
-                        Pages_arr[i].allocated = 1;
-
-
-                        va += PAGE_SIZE;
-
-
-                    } else {
-
-
-                        for (int R=firstpg; R<i-firstpg; R++) {
-                        uint32 va_unmap= HARD_LIMIT + PAGE_SIZE + (R * PAGE_SIZE);
-                            unmap_frame(ptr_page_directory, va_unmap);
-                            free_frame (frame);
-                           Pages_arr[R].allocated =0;
-
-                        }
-
-                    	//kfree(&va_start_address);
-                        return NULL;
-                    }
-                    Pages_arr[firstpg].va=va_start_address;
-                    Pages_arr[firstpg].psize=size;
+                		if(count_wrabaad == pgs_needed)
+                		{
+                			break;
+                		}
+                	}
+                	else
+                	{
+                		count_wrabaad = 0;
+                	}
                 }
 
+        if (count_wrabaad < pgs_needed) {
+            return NULL;
+        }
 
+        uint32 va_start_address = HARD_LIMIT + PAGE_SIZE + (firstpg * PAGE_SIZE);
+        uint32 va = va_start_address;
 
+        int allct_res;
+        int map_res;
+        for (int i = firstpg; i < firstpg + pgs_needed; i++) {
+            struct FrameInfo *frame;
 
+           allct_res=allocate_frame(&frame);
+           map_res=map_frame(ptr_page_directory, frame, va, PERM_PRESENT | PERM_WRITEABLE);
 
+                Pages_arr[i].allocated = 1;
+                frame->bufferedVA=va;
+                va += PAGE_SIZE;
+            if(map_res!=0||allct_res!=0) {
+            	uint32 address = va_start_address;
+            	for (int R = firstpg; R < i; R++)
+            	{ frame->bufferedVA=0;
+            	  unmap_frame(ptr_page_directory, address);
+            	  address += PAGE_SIZE;
+            	  Pages_arr[R].allocated = 0;
+            	  Pages_arr[R].psize = 0;
+            	 }
+                return NULL;
+            }
+        }
 
+        Pages_arr[firstpg].va = va_start_address;
+        Pages_arr[firstpg].psize = size;
+        return (void*) va_start_address;
 
-
-
-  return (void*)va_start_address;
-
-	}
-
-
-	else
-		return NULL;
-
-	}
-
-
-
+    }
+    else {
+        return NULL;
+    }
+}
 
 void kfree(void* virtual_address)
 {
@@ -236,47 +223,35 @@ void kfree(void* virtual_address)
 		free_block(virtual_address);
 		return;
 	}
-
-
+	else
+	{
 
 		uint32 va = (uint32)virtual_address;
 		va = ROUNDDOWN(va, PAGE_SIZE);
-		int index =-1;
-		int page = (va - getHardLimit() + PAGE_SIZE) / PAGE_SIZE;
-		for(int i =0 ;i<((KERNEL_HEAP_MAX - (HARD_LIMIT+PAGE_SIZE)) / PAGE_SIZE);i++){
-			if(Pages_arr[i].va == va)
-			{
-				index =i;
-				break;
-			}
-		}
 
-
-		if(Pages_arr[index].allocated == 0)
+		int page = (va - (getHardLimit() + PAGE_SIZE)) / PAGE_SIZE;
+		if(Pages_arr[page].allocated == 0)
 		{
 			return;
 		}
 
+		va = Pages_arr[page].va;
 
+		int allocated_pages = ROUNDUP(Pages_arr[page].psize, PAGE_SIZE) / PAGE_SIZE;
 
-		int allocated_pages =  ROUNDUP(Pages_arr[index].psize, PAGE_SIZE) / PAGE_SIZE;
-
-		for(int i = index; i < index + allocated_pages; i++)
-		{//cprintf("i = %d",i);
-
-			struct FrameInfo *framee;
-			uint32* fake;
-
+		for(int i = page; i < page + allocated_pages; i++)
+		{
 			unmap_frame(ptr_page_directory, va);
-
 			va += PAGE_SIZE;
 			Pages_arr[i].allocated = 0;
 			Pages_arr[i].psize = 0;
-
 		}
 
 		return;
 	}
+
+	return;
+}
 
 
 
@@ -295,17 +270,17 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
 	uint32 *ptr_page_table;
 		get_page_table(ptr_page_directory,virtual_address,&ptr_page_table);
-		//uint32 pagedirindex= PDX(virtual_address);
+
 		uint32 pagetblindex=PTX(virtual_address);
 
-	if(ptr_page_table==NULL){
-		return 0;
+	if(ptr_page_table!=0&&(ptr_page_table[pagetblindex] & PERM_PRESENT)){
+		uint32 frameadd=ptr_page_table[pagetblindex]&0xFFFFF000;
+				uint32 offset= virtual_address& 0x00000FFF;
+				unsigned int physicaladd=frameadd+offset;
+				return physicaladd;
 	}
 	else{
-		uint32 frameadd=ptr_page_table[pagetblindex]&0xFFFFF000;
-		uint32 offset= virtual_address& 0x00000FFF;
-		unsigned int physicaladd=frameadd|offset;
-		return physicaladd;
+		return 0;
 	}
 }
 
@@ -319,21 +294,21 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	//refer to the project presentation and documentation for details
 
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
-	uint32 frameadd=physical_address&0xFFFFF000;
-		uint32 offset= physical_address& 0x00000FFF;
-		uint32 *ptr_page_table;
-		uint32 pagedirindex= PDX(frameadd);
-		uint32 pagetblindex=PTX(frameadd);
-		uint32 v_a=KERNEL_HEAP_START+(pagedirindex*PAGE_SIZE);
-		int r=get_page_table(ptr_page_directory,v_a,&ptr_page_table);
-		if(r==0)
-		{return 0;}
-		else
-		{
-			unsigned int va=KERNEL_HEAP_START+(pagedirindex*PAGE_SIZE)+(pagetblindex*PAGE_SIZE)+offset;
-			return va;
 
-		}
+
+	struct FrameInfo * frame=NULL;
+	uint32 offset= physical_address& 0xFFF;
+		frame=to_frame_info(physical_address);
+	//	if(frame!=NULL&&frame->references!=0&&frame->VA!=0){
+
+	        if (frame->references==0||frame==NULL){
+	        	return 0;}
+	        else{
+	        	unsigned int va =frame->bufferedVA;
+		    return (va|offset);}
+
+	        return 0;
+
 
 }
 //=================================================================================//
