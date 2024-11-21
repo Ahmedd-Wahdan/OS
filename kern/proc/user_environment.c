@@ -872,24 +872,6 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	//return a pointer to the start of the allocated space (including the GUARD PAGE)
 	//On failure: panic
 
-//	uint32 num_of_pages = (KERNEL_STACK_SIZE + (PAGE_SIZE - 1)) / PAGE_SIZE;
-//
-//	for(uint32 i = 0; i < num_of_pages; i++)
-//	{
-//		uint32 va = KERN_STACK_TOP - (PAGE_SIZE * (i + 1));
-//		create_page_table(ptr_user_page_directory, va);
-//
-//		struct FrameInfo* frame;
-//		if(allocate_frame(&frame) != 0) panic("Failed to allocate frame for user kernel stack!");
-//
-//		if(map_frame(ptr_user_page_directory, frame, va, PERM_WRITEABLE | PERM_PRESENT) != 0) panic("Failed to map frame for user kernel stack!");
-//	}
-//
-//	uint32 guard_va = KERN_STACK_TOP - KERNEL_STACK_SIZE;
-//	pt_set_page_permissions(ptr_user_page_directory, guard_va, 0, PERM_PRESENT);
-//
-//	return (void*)(KERN_STACK_TOP - PAGE_SIZE);
-
 	struct Env* e;
 	e = (struct Env*)kmalloc(KERNEL_STACK_SIZE);
 	unmap_frame(ptr_user_page_directory, (uint32)&(e->kstack));
