@@ -1,5 +1,15 @@
 #include <inc/lib.h>
 
+#define MAX_NUM_OF_UPAGES (USER_HEAP_MAX - USER_HEAP_START) / PAGE_SIZE
+
+struct pages_u {
+    bool allocated;
+    uint32 va;
+    int psize;
+
+};
+struct pages_u Pages_arr_user_heap[MAX_NUM_OF_UPAGES];
+
 //==================================================================================//
 //============================ REQUIRED FUNCTIONS ==================================//
 //==================================================================================//
@@ -24,13 +34,61 @@ void* malloc(uint32 size)
 	//==============================================================
 	//TODO: [PROJECT'24.MS2 - #12] [3] USER HEAP [USER SIDE] - malloc()
 	// Write your code here, remove the panic and write your code
-	panic("malloc() is not implemented yet...!!");
-	return NULL;
+	//panic("malloc() is not implemented yet...!!");
+	//return NULL;
 	//Use sys_isUHeapPlacementStrategyFIRSTFIT() and	sys_isUHeapPlacementStrategyBESTFIT()
 	//to check the current strategy
+	if(sys_isUHeapPlacementStrategyFIRSTFIT()){
+		int max_size = USER_HEAP_MAX - (myEnv->hard_limit + PAGE_SIZE);
+		if (size > max_size) {
+			return NULL;
+		}
 
+		if (size <= DYN_ALLOC_MAX_BLOCK_SIZE) {
+			return alloc_block_FF((uint32) size);
+		}
+
+	     int pages_needed = ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
+	     int counter= 0;
+	     int first_page = -1;
+	     uint32 MAX_PAGES =  max_size / PAGE_SIZE;
+
+	     for(uint32 i = 0; i < MAX_PAGES; i++){
+	    	 if(Pages_arr_user_heap[i].allocated == 0){
+	    		 if(counter == 0){
+	    			 first_page = i;
+	    		 }
+	    		 counter++;
+	    		 if(counter== pages_needed){
+	    			 break;
+	    		 }
+	    	 }
+	         else{
+	        	 counter= 0;
+	         }
+
+	     }
+	     if (counter < pages_needed) {
+	    	 return NULL;
+	     }
+
+	    for (int i = first_page; i < first_page + pages_needed; i++) {
+	    	Pages_arr_user_heap[i].allocated = 1;
+	    }
+
+	    uint32 va_start_address = myEnv->hard_limit + PAGE_SIZE + (first_page * PAGE_SIZE);
+	    sys_allocate_user_mem(va_start_address,ROUNDUP(size, PAGE_SIZE));
+	    Pages_arr_user_heap[first_page].va = va_start_address;
+	    Pages_arr_user_heap[first_page].psize = size;
+
+	    return (void*) va_start_address;
+	}
+	return NULL;
 }
 
+//=================================
+// [3] FREE SPACE FROM USER HEAP:
+//=================================
 //=================================
 // [3] FREE SPACE FROM USER HEAP:
 //=================================
@@ -38,9 +96,48 @@ void free(void* virtual_address)
 {
 	//TODO: [PROJECT'24.MS2 - #14] [3] USER HEAP [USER SIDE] - free()
 	// Write your code here, remove the panic and write your code
-	panic("free() is not implemented yet...!!");
-}
+	//panic("free() is not implemented yet...!!");
 
+	if (virtual_address == NULL) {
+        return;
+	}
+
+	uint32 address = (uint32)virtual_address;
+
+	if (address >= USER_HEAP_MAX || address < USER_HEAP_START) {
+		panic("HEYYYY YOUUUU!!!!");
+		return;
+	}
+
+	if (address >= myEnv->segment_break && address < myEnv->hard_limit + PAGE_SIZE) {
+		return;
+	}
+
+	if (address >= myEnv->start && address < myEnv->segment_break) {
+		free_block((void*)address);
+		return;
+	}
+
+	int first_page = (address - (myEnv->hard_limit + PAGE_SIZE)) / PAGE_SIZE;
+
+	if (!Pages_arr_user_heap[first_page].allocated) {
+		return;
+	}
+
+	uint32 size = Pages_arr_user_heap[first_page].psize;
+
+	//ROUNDUP(size, PAGE_SIZE);
+
+	sys_free_user_mem(address, size);
+
+	int pages_needed = ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
+
+	for (int i = first_page; i < first_page + pages_needed; i++) {
+		Pages_arr_user_heap[i].allocated = 0;
+	}
+
+	return;
+}
 
 //=================================
 // [4] ALLOCATE SHARED VARIABLE:

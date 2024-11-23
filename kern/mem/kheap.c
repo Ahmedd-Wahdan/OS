@@ -186,10 +186,11 @@ void* kmalloc(unsigned int size)
             	 }
                 return NULL;
             }
+            Pages_arr[i].va = va_start_address;
+            Pages_arr[i].psize = size;
         }
 
-        Pages_arr[firstpg].va = va_start_address;
-        Pages_arr[firstpg].psize = size;
+
         return (void*) va_start_address;
 
     }
