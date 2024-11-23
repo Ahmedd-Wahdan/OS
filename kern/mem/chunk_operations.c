@@ -10,6 +10,7 @@
 #include <kern/proc/user_environment.h>
 #include "kheap.h"
 #include "memory_manager.h"
+#include <inc/mmu.h>
 #include <inc/queue.h>
 
 //extern void inctst();
@@ -130,7 +131,7 @@ void* sys_sbrk(int numOfPages)
 	 * NOTES:
 	 * 	1) As in real OS, allocate pages lazily. While sbrk moves the segment break, pages are not allocated
 	 * 		until the user program actually tries to access data in its heap (i.e. will be allocated via the fault handler).
-	 * 	2) Allocating additional pages for a process’ heap will fail if, for example, the free frames are exhausted
+	 * 	2) Allocating additional pages for a processâ€™ heap will fail if, for example, the free frames are exhausted
 	 * 		or the break exceed the limit of the dynamic allocator. If sys_sbrk fails, the net effect should
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
@@ -190,11 +191,30 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 
 	//TODO: [PROJECT'24.MS2 - #15] [3] USER HEAP [KERNEL SIDE] - free_user_mem
 	// Write your code here, remove the panic and write your code
-	panic("free_user_mem() is not implemented yet...!!");
+	//panic("free_user_mem() is not implemented yet...!!");
+	uint32 Rva = ROUNDDOWN(virtual_address, PAGE_SIZE);
+    uint32 Rsize = ROUNDUP(size, PAGE_SIZE);
+	uint32 end_va=Rsize+Rva;
+	uint32 unmark_flag=0xFFFFF1FF;
+//momken n unmap lw ma3adash el test
+	for(int i=Rva;i<end_va;i+=PAGE_SIZE){
+			uint32 *ptr_page_table;
+			int x= get_page_table(e->env_page_directory,i,&ptr_page_table);
+			 if (x == 0) {
+			            continue;
+			        }
+			int  pagetblindex=PTX(i);
+			ptr_page_table[pagetblindex]=ptr_page_table[pagetblindex]&unmark_flag;
+			pf_remove_env_page(e,i);
+			env_page_ws_invalidate(e,i);
 
+
+
+		}
 
 	//TODO: [PROJECT'24.MS2 - BONUS#3] [3] USER HEAP [KERNEL SIDE] - O(1) free_user_mem
 }
+
 
 //=====================================
 // 2) FREE USER MEMORY (BUFFERING):
