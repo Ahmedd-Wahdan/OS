@@ -46,7 +46,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 		struct FrameInfo *frame_info;
 		 if(allocate_frame(&frame_info) == 0) {
 		        map_frame(ptr_page_directory, frame_info, virtual_address, PERM_PRESENT  | PERM_WRITEABLE);
-		        frame_info->bufferedVA=virtual_address;
+		        frame_info->VA=virtual_address;
 		 }
 		 else{
 			 for (uint32 allocated_va = daStart; allocated_va < virtual_address; allocated_va += PAGE_SIZE){
@@ -83,7 +83,6 @@ void* sbrk(int numOfPages)
 	uint32 hard_limit = getHardLimit();
 	uint32 old_s_brk = getSBrk();
 	uint32 new_s_brk = old_s_brk + size;
-	//new_sbrk = new_s_brk;
 	if(size == 0)
 		return (void*)old_s_brk;
 	if(new_s_brk > hard_limit)
@@ -93,7 +92,7 @@ void* sbrk(int numOfPages)
 				struct FrameInfo *frame_info;
 				 if(allocate_frame(&frame_info) == 0) {
 				        map_frame(ptr_page_directory, frame_info, va, PERM_PRESENT  | PERM_WRITEABLE);
-				        frame_info->bufferedVA=va;
+				        frame_info->VA=va;
 				    }
 				 else{
 					 for (uint32 allocated_va = old_s_brk; allocated_va < va; allocated_va += PAGE_SIZE){
@@ -173,12 +172,12 @@ void* kmalloc(unsigned int size)
            map_res=map_frame(ptr_page_directory, frame, va, PERM_PRESENT | PERM_WRITEABLE);
 
                 Pages_arr[i].allocated = 1;
-                frame->bufferedVA=va;
+                frame->VA=va;
                 va += PAGE_SIZE;
             if(map_res!=0||allct_res!=0) {
             	uint32 address = va_start_address;
             	for (int R = firstpg; R < i; R++)
-            	{ frame->bufferedVA=0;
+            	{ frame->VA=0;
             	  unmap_frame(ptr_page_directory, address);
             	  address += PAGE_SIZE;
             	  Pages_arr[R].allocated = 0;
@@ -305,7 +304,7 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	        if (frame->references==0||frame==NULL){
 	        	return 0;}
 	        else{
-	        	unsigned int va =frame->bufferedVA;
+	        	unsigned int va =frame->VA;
 		    return (va|offset);}
 
 	        return 0;

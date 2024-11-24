@@ -9,6 +9,7 @@ struct pages_u {
 
 };
 struct pages_u Pages_arr_user_heap[MAX_NUM_OF_UPAGES];
+bool sget_flag =0;
 
 //==================================================================================//
 //============================ REQUIRED FUNCTIONS ==================================//
@@ -44,7 +45,7 @@ void* malloc(uint32 size)
 			return NULL;
 		}
 
-		if (size <= DYN_ALLOC_MAX_BLOCK_SIZE) {
+		if (size <= DYN_ALLOC_MAX_BLOCK_SIZE&&sget_flag==0) {
 			return alloc_block_FF((uint32) size);
 		}
 
@@ -126,8 +127,6 @@ void free(void* virtual_address)
 
 	uint32 size = Pages_arr_user_heap[first_page].psize;
 
-	//ROUNDUP(size, PAGE_SIZE);
-
 	sys_free_user_mem(address, size);
 
 	int pages_needed = ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
@@ -143,16 +142,65 @@ void free(void* virtual_address)
 // [4] ALLOCATE SHARED VARIABLE:
 //=================================
 void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
-{
-	//==============================================================
+{//==============================================================
 	//DON'T CHANGE THIS CODE========================================
 	if (size == 0) return NULL ;
 	//==============================================================
 	//TODO: [PROJECT'24.MS2 - #18] [4] SHARED MEMORY [USER SIDE] - smalloc()
 	// Write your code here, remove the panic and write your code
-	panic("smalloc() is not implemented yet...!!");
+	//panic("smalloc() is not implemented yet...!!");
+	if(sys_isUHeapPlacementStrategyFIRSTFIT()){
+	int max_size = USER_HEAP_MAX - (myEnv->hard_limit + PAGE_SIZE);
+	if (size > max_size) {
 	return NULL;
-}
+ }
+	uint32 Rsize=ROUNDUP(size,PAGE_SIZE);
+	int pgs_needed = Rsize / PAGE_SIZE;
+	int count_wrabaad = 0;
+	int firstpg = -1;
+	uint32 MAX_PAGES = (USER_HEAP_MAX - (myEnv->hard_limit + PAGE_SIZE)) / PAGE_SIZE;
+	        for(uint32 i = 0; i < MAX_PAGES; i++){
+	                	if(Pages_arr_user_heap[i].allocated == 0)
+	                	{
+	                		if(count_wrabaad == 0)
+	                		{
+	                			firstpg = i;
+	                		}
+
+	                		count_wrabaad++;
+
+	                		if(count_wrabaad == pgs_needed)
+	                		{
+	                			break;
+	                		}
+	                	}
+	                	else
+	                	{
+	                		count_wrabaad = 0;
+	                	}
+	                }
+
+	        if (count_wrabaad < pgs_needed) {
+	            return NULL;
+	        }
+	        for (int i = firstpg; i < firstpg + pgs_needed; i++) {
+	        	    	Pages_arr_user_heap[i].allocated = 1;
+	        	    }
+	    uint32 va_start_address = myEnv->hard_limit + PAGE_SIZE + (firstpg * PAGE_SIZE);
+	    int res =sys_createSharedObject(sharedVarName,size,isWritable,(void*)va_start_address) ;
+	    if(res>=0){
+	    sys_allocate_user_mem(va_start_address,ROUNDUP(size, PAGE_SIZE));
+	    Pages_arr_user_heap[firstpg].va = va_start_address;
+	    Pages_arr_user_heap[firstpg].psize = size;
+	    return (void*) va_start_address;
+	    }
+	    for (int i = firstpg; i < firstpg + pgs_needed; i++) {
+	           Pages_arr_user_heap[i].allocated = 0;
+	       }
+	    	return NULL;
+	}
+	return NULL;}
+
 
 //========================================
 // [5] SHARE ON ALLOCATED SHARED VARIABLE:
@@ -161,8 +209,27 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 {
 	//TODO: [PROJECT'24.MS2 - #20] [4] SHARED MEMORY [USER SIDE] - sget()
 	// Write your code here, remove the panic and write your code
-	panic("sget() is not implemented yet...!!");
-	return NULL;
+	//panic("sget() is not implemented yet...!!");
+	void* first_va;
+	int size = ROUNDUP((sys_getSizeOfSharedObject(ownerEnvID,sharedVarName)),PAGE_SIZE);
+
+			if(size == E_SHARED_MEM_NOT_EXISTS)
+			{
+				return NULL;
+			}
+			sget_flag=1;
+			first_va =ROUNDDOWN( malloc(size),PAGE_SIZE);
+			sget_flag=0;
+			if(first_va==NULL){
+				return NULL;
+			}
+			int ret = sys_getSharedObject(ownerEnvID,sharedVarName,first_va);
+			if(ret<0){
+				return NULL;
+			}else{
+				return first_va;
+			}
+
 }
 
 

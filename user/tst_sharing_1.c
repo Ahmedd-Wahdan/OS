@@ -59,24 +59,30 @@ _main(void)
 		if (diff < expected || diff > expected +1+1 /*extra 1 page & 1 table for sbrk (at max)*/) {is_correct = 0; cprintf("Wrong allocation (current=%d, expected=%d): make sure that you allocate the required space in the user environment and add its frames to frames_storage", freeFrames - sys_calculate_free_frames(), expected);}
 		if (is_correct) eval += 20 ;
 	}
+
 	cprintf("Step A is completed successfully!!\n\n\n");
 
 	is_correct = 1;
 	cprintf("STEP B: checking reading & writing... [40%]\n");
 	{
+		 cprintf("x: %p, y: %p\n", x, y);
+		    cprintf("PAGE_SIZE: %d\n", PAGE_SIZE);
 		int i=0;
+
+
 		for(;i<PAGE_SIZE/4;i++)
 		{
 			x[i] = -1;
 			y[i] = -1;
+
 		}
+
 
 		i=0;
 		for(;i<2*PAGE_SIZE/4;i++)
 		{
 			z[i] = -1;
 		}
-
 		if( x[0] !=  -1)  					{is_correct = 0; cprintf("Reading/Writing of shared object is failed");}
 		if( x[PAGE_SIZE/4 - 1] !=  -1)  	{is_correct = 0; cprintf("Reading/Writing of shared object is failed");}
 

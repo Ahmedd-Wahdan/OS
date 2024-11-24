@@ -162,14 +162,7 @@ void* sys_sbrk(int numOfPages)
 // 1) ALLOCATE USER MEMORY:
 //=====================================
 void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
-{
-	/*====================================*/
-	/*Remove this line before start coding*/
-//	inctst();
-//	return;
-	/*====================================*/
-
-	//TODO: [PROJECT'24.MS2 - #13] [3] USER HEAP [KERNEL SIDE] - allocate_user_mem()
+{//TODO: [PROJECT'24.MS2 - #13] [3] USER HEAP [KERNEL SIDE] - allocate_user_mem()
 	// Write your code here, remove the panic and write your code
 	//panic("allocate_user_mem() is not implemented yet...!!");
 
@@ -186,7 +179,6 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 		pt_set_page_permissions(e->env_page_directory, address, PERM_AVAILABLE | PERM_WRITEABLE | PERM_USER, 0);
 
 	}
-
 }
 
 //=====================================
@@ -205,13 +197,14 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size){
 
 	uint32 end_va=Rsize+Rva;
 
-	for(int i=Rva;i < end_va;i+=PAGE_SIZE){
+	for(int i=Rva;i <end_va;i+=PAGE_SIZE){
+		unmap_frame(e->env_page_directory,i);
 		pt_set_page_permissions(e->env_page_directory, i, 0,PERM_AVAILABLE | PERM_WRITEABLE | PERM_USER);
 
-		env_page_ws_invalidate(e,i); // Removes the mapping from the working set
+		env_page_ws_invalidate(e,i);
 
-		if(pf_read_env_page(e, (void*)i) == 0){ // zero means its exist
-			pf_remove_env_page(e,i);     //Deletes the page from the page table if it's exist
+		if(pf_read_env_page(e, (void*)i) == 0){
+			pf_remove_env_page(e,i);
 		}
 
 }

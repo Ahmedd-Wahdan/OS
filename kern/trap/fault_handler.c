@@ -232,9 +232,9 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	if(wsSize < (faulted_env->page_WS_max_size))
 	{
 		bool flag = 0;
-		cprintf("\nis writable? : %d\n",pt_get_page_permissions(faulted_env->env_page_directory,fault_va)&PERM_WRITEABLE);
+		//cprintf("\nis writable? : %d\n",pt_get_page_permissions(faulted_env->env_page_directory,fault_va)&PERM_WRITEABLE);
 		struct FrameInfo *new_frame_ptr;    //allocate frame for the page coming from disk
-		int rett = allocate_frame(&new_frame_ptr);
+
 		 //map it to the faulted va
 		int ret  = pf_read_env_page(faulted_env,(void*)fault_va);
 		if (ret == E_PAGE_NOT_EXIST_IN_PF){  //if it is a stack page or heap page its okay to be not in disk otherwise exit
@@ -247,8 +247,10 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 			flag=1;
 		}
 		if(flag==1){
+			int rett = allocate_frame(&new_frame_ptr);
 			map_frame(faulted_env->env_page_directory,new_frame_ptr,fault_va,PERM_USER|PERM_PRESENT|PERM_WRITEABLE|PERM_AVAILABLE);
 		}else{
+			int rett = allocate_frame(&new_frame_ptr);
 			int perms = pt_get_page_permissions(faulted_env->env_page_directory,fault_va);
 			map_frame(faulted_env->env_page_directory,new_frame_ptr,fault_va,perms);
 
@@ -259,6 +261,9 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		if(wsSize == (faulted_env->page_WS_max_size))
 		{
 			faulted_env->page_last_WS_element = LIST_FIRST(&faulted_env->page_WS_list);
+		}
+		else {
+			faulted_env->page_last_WS_element=NULL;
 		}
 	}
 	else
