@@ -143,11 +143,13 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	//Your Code is Here...
 
 	struct Env* myenv = get_cpu_proc(); //The calling environment
+	cprintf("\n createeeeeeeeee 1\n");
 	if (get_share(ownerID,shareName)!=NULL)
 	{     return E_SHARED_MEM_EXISTS;
 		}
 	struct Share *sharedobj;
 	sharedobj=create_share(ownerID,shareName,size,isWritable);
+	cprintf("\n createeeeeeeeee 22222\n");
 
 	uint32 Rsize=ROUNDUP(size,PAGE_SIZE);
 	uint32 Rva =ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);
@@ -169,11 +171,15 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	 LIST_INSERT_TAIL(&AllShares.shares_list, sharedobj);
 	 release_spinlock(&(AllShares.shareslock));
 	 int map_res;
+		cprintf("\n createeeeeeeeee 33\n");
+
 
 	for (uint32 i = 0; i < num_of_pgs; i++){
 		 struct FrameInfo *frame;
-         allocate_frame(&frame);
+          int all=allocate_frame(&frame);
+
          map_res=map_frame(myenv->env_page_directory, frame, Rva, PERM_PRESENT |PERM_WRITEABLE|PERM_AVAILABLE);
+
          if ( map_res != 0) {
              for (int R = 0; R < i; R++) {
 
@@ -188,6 +194,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
      Rva+=PAGE_SIZE;
 
         }
+	cprintf(" \n id in create : %d \n",sharedobj->ID);
 	return sharedobj->ID;}
 
 
@@ -223,6 +230,8 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 
 	}
     sharedobj->references++;
+	cprintf(" \n id in getttttt : %d \n",sharedobj->ID);
+
     return sharedobj->ID;
 
 }
@@ -235,14 +244,48 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 //==========================
 //delete the given shared object from the "shares_list"
 //it should free its framesStorage and the share object itself
+
 void free_share(struct Share* ptrShare)
 {
 	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - free_share()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("free_share is not implemented yet");
+//	panic("free_share is not implemented yet");
 	//Your Code is Here...
 
+	cprintf("\n free share start\n");
+
+	  acquire_spinlock(&(AllShares.shareslock));
+	  LIST_REMOVE(&AllShares.shares_list, ptrShare);
+	  release_spinlock(&(AllShares.shareslock));
+	   int num_of_frames = ROUNDDOWN(ptrShare->size, PAGE_SIZE) / PAGE_SIZE;
+
+	    if (ptrShare->framesStorage != NULL)
+	    {
+	        for (int i = 0; i < num_of_frames; i++)
+	        {
+	            if (ptrShare->framesStorage[i] != NULL)
+	            {
+
+	            	 ptrShare->framesStorage[i]->references--;
+	            	 if (ptrShare->framesStorage[i]->references == 0) {
+	            	             free_frame(ptrShare->framesStorage[i]);
+	            	         }
+	                 ptrShare->framesStorage[i] = NULL;
+
+	            }
+	        }
+
+	        kfree(ptrShare->framesStorage);
+	    }
+
+	    kfree(ptrShare);
+		cprintf("\n free share end \n");
+
+
+
 }
+
+
 //========================
 // [B2] Free Share Object:
 //========================
@@ -250,7 +293,74 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 {
 	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - freeSharedObject()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("freeSharedObject is not implemented yet");
+	//panic("freeSharedObject is not implemented yet");
 	//Your Code is Here...
+	 struct Env *myenv=  get_cpu_proc();
+
+		cprintf("\n shared mem start \n");
+
+	    uint32 *ptr_page_table=NULL ;
+		uint32 pagetblindex=PTX((uint32)startVA);
+
+		acquire_spinlock(&(AllShares.shareslock));
+			struct Share* obj = AllShares.shares_list.lh_first;
+
+			while(obj != NULL)
+			{
+
+				if(obj->ID == sharedObjectID )
+					{
+					break;
+					}
+				obj = obj->prev_next_info.le_next;
+
+		    }
+			 if (obj == NULL) {
+			        release_spinlock(&(AllShares.shareslock));
+			        return -1;
+			    }
+       release_spinlock(&(AllShares.shareslock));
+
+		uint32 Rva = ROUNDDOWN((uint32)startVA, PAGE_SIZE);
+	    uint32 Rsize = ROUNDUP(obj->size, PAGE_SIZE);
+	    uint32 end_va=Rsize+Rva;
+		cprintf(" \n first check \n");
+
+		  for(uint32 i=Rva;i <end_va;i+=PAGE_SIZE){
+		  		unmap_frame(myenv->env_page_directory,i);
+                env_page_ws_invalidate(myenv, i);
+
+	      get_page_table(myenv->env_page_directory,i,&ptr_page_table);
+	      if (ptr_page_table != NULL){
+	  	    bool page_table_empty = 1;
+
+	    	for(int i=0;i<NPDENTRIES;i++){
+	          if (ptr_page_table[i] & PERM_PRESENT) {
+	    		   page_table_empty =0 ;
+	    		    break;
+	    				          }
+	    			  }
+		  if (page_table_empty) {
+		          kfree(ptr_page_table);
+                  myenv->env_page_directory[PDX(i)] = 0;
+
+		      }
+		  }
+          tlb_invalidate(myenv->env_page_directory, (void *)i);
+
+	}
+		  obj->references--;
+
+		 if ( obj->references==0)
+		 {
+			 free_share(obj);
+		 }
+
+		 cprintf("\nfree shared end \n");
+
+
+		return 0;
+
+
 
 }

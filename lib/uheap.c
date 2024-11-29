@@ -8,6 +8,11 @@ struct pages_u {
     int psize;
 
 };
+struct sharedarr {
+	int32 ID;
+	uint32 va;
+};
+struct sharedarr arr [MAX_NUM_OF_UPAGES];
 struct pages_u Pages_arr_user_heap[MAX_NUM_OF_UPAGES];
 bool sget_flag =0;
 
@@ -192,6 +197,10 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 	    sys_allocate_user_mem(va_start_address,ROUNDUP(size, PAGE_SIZE));
 	    Pages_arr_user_heap[firstpg].va = va_start_address;
 	    Pages_arr_user_heap[firstpg].psize = size;
+	    arr[firstpg].ID=res;
+	    arr[firstpg].va=va_start_address;
+
+
 	    return (void*) va_start_address;
 	    }
 	    for (int i = firstpg; i < firstpg + pgs_needed; i++) {
@@ -224,9 +233,16 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 				return NULL;
 			}
 			int ret = sys_getSharedObject(ownerEnvID,sharedVarName,first_va);
+			uint32 first_page = ((uint32)first_va - (myEnv->hard_limit + PAGE_SIZE)) / PAGE_SIZE;
+
+			arr[first_page].ID=ret;
+			arr[first_page].va=(uint32)first_va;
+
+
 			if(ret<0){
 				return NULL;
 			}else{
+
 				return first_va;
 			}
 
@@ -252,7 +268,31 @@ void sfree(void* virtual_address)
 {
 	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [USER SIDE] - sfree()
 	// Write your code here, remove the panic and write your code
-	panic("sfree() is not implemented yet...!!");
+	//panic("sfree() is not implemented yet...!!");
+//	cprintf(" \n sfreeeeeee check \n");
+
+	uint32 va =ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);
+
+		int first_page = (va - (myEnv->hard_limit + PAGE_SIZE)) / PAGE_SIZE;
+	    int32 ID=arr[first_page].ID;
+
+	    uint32 size =Pages_arr_user_heap[first_page].psize;
+	    int pgs_needed=size/PAGE_SIZE;
+		sys_free_user_mem(va, size);
+
+        int res=sys_freeSharedObject(ID,(void*)va);
+
+		if (res==0){
+				for (int i = first_page; i < first_page + pgs_needed; i++) {
+			           Pages_arr_user_heap[i].allocated = 0;
+			           arr[i].ID = -1;
+			           arr[i].va = 0;
+			       }
+			}
+
+
+
+
 }
 
 
