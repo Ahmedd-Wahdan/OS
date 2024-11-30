@@ -267,6 +267,25 @@ void *alloc_block_BF(uint32 size)
 
 	if(!min_sz_block)
 	{
+		//SBrk
+		void* sbrk_ra = sbrk(1);
+		if(sbrk_ra != (void*)-1)
+		{
+			uint32 free_or_not = is_free_block(END_BLOCK);
+			END_BLOCK = sbrk_ra + PAGE_SIZE - sizeof(int);
+			*END_BLOCK = 1;
+
+			if(free_or_not == 0)
+			{
+				set_block_data(sbrk_ra , PAGE_SIZE,0);
+				LIST_INSERT_TAIL(&freeBlocksList,(struct BlockElement*)sbrk_ra);
+			}
+			else{
+				void* last_element = (void*)LIST_LAST(&freeBlocksList);
+				set_block_data(last_element,get_block_size(last_element) +  PAGE_SIZE  , 0) ;
+			}
+			return alloc_block_BF(size);
+		}
 		return NULL;
 	}
 
