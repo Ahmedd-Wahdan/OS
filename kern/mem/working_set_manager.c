@@ -23,6 +23,10 @@ inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, 
 	if(element == NULL) panic("Failed to allocate element for working set!");
 
 	element->virtual_address = virtual_address;
+
+	uint32* _;
+	get_frame_info(e->env_page_directory, virtual_address, &_)->wse = element;
+
 	return element;
 }
 

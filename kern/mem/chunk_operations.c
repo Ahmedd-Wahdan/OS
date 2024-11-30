@@ -198,15 +198,20 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size){
 	uint32 end_va=Rsize+Rva;
 
 	for(int i=Rva;i <end_va;i+=PAGE_SIZE){
-		unmap_frame(e->env_page_directory,i);
-		pt_set_page_permissions(e->env_page_directory, i, 0,PERM_AVAILABLE | PERM_WRITEABLE | PERM_USER);
-
-		env_page_ws_invalidate(e,i);
-
+		pt_set_page_permissions(e->env_page_directory, i, 0, PERM_AVAILABLE);
 		if(pf_read_env_page(e, (void*)i) == 0){
-			pf_remove_env_page(e,i);
+			pf_remove_env_page(e, i);
 		}
 
+		if(pt_get_page_permissions(e->env_page_directory, i) & PERM_PRESENT){
+			uint32* _;
+			struct WorkingSetElement* wse = get_frame_info(e->env_page_directory, i, &_)->wse;
+			unmap_frame(e->env_page_directory, i);
+			LIST_REMOVE(&e->page_WS_list, wse);
+			kfree(wse);
+		}
+
+		//env_page_ws_invalidate(e, i);
 }
 
 	//TODO: [PROJECT'24.MS2 - BONUS#3] [3] USER HEAP [KERNEL SIDE] - O(1) free_user_mem

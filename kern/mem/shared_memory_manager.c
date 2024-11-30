@@ -143,13 +143,11 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	//Your Code is Here...
 
 	struct Env* myenv = get_cpu_proc(); //The calling environment
-	cprintf("\n createeeeeeeeee 1\n");
 	if (get_share(ownerID,shareName)!=NULL)
 	{     return E_SHARED_MEM_EXISTS;
 		}
 	struct Share *sharedobj;
 	sharedobj=create_share(ownerID,shareName,size,isWritable);
-	cprintf("\n createeeeeeeeee 22222\n");
 
 	uint32 Rsize=ROUNDUP(size,PAGE_SIZE);
 	uint32 Rva =ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);
@@ -167,12 +165,10 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		perm=PERM_WRITEABLE;
 	}
 
-	acquire_spinlock(&(AllShares.shareslock));
+	 acquire_spinlock(&(AllShares.shareslock));
 	 LIST_INSERT_TAIL(&AllShares.shares_list, sharedobj);
 	 release_spinlock(&(AllShares.shareslock));
 	 int map_res;
-		cprintf("\n createeeeeeeeee 33\n");
-
 
 	for (uint32 i = 0; i < num_of_pgs; i++){
 		 struct FrameInfo *frame;
@@ -191,11 +187,11 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
          }
 
      sharedobj->framesStorage[i]=frame;
-     Rva+=PAGE_SIZE;
+     Rva += PAGE_SIZE;
+	}
 
-        }
-	cprintf(" \n id in create : %d \n",sharedobj->ID);
-	return sharedobj->ID;}
+	return sharedobj->ID;
+}
 
 
 
@@ -230,7 +226,6 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 
 	}
     sharedobj->references++;
-	cprintf(" \n id in getttttt : %d \n",sharedobj->ID);
 
     return sharedobj->ID;
 
@@ -251,8 +246,6 @@ void free_share(struct Share* ptrShare)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 //	panic("free_share is not implemented yet");
 	//Your Code is Here...
-
-	cprintf("\n free share start\n");
 
 	  acquire_spinlock(&(AllShares.shareslock));
 	  LIST_REMOVE(&AllShares.shares_list, ptrShare);
@@ -279,10 +272,6 @@ void free_share(struct Share* ptrShare)
 	    }
 
 	    kfree(ptrShare);
-		cprintf("\n free share end \n");
-
-
-
 }
 
 
@@ -296,8 +285,6 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 	//panic("freeSharedObject is not implemented yet");
 	//Your Code is Here...
 	 struct Env *myenv=  get_cpu_proc();
-
-		cprintf("\n shared mem start \n");
 
 	    uint32 *ptr_page_table=NULL ;
 		uint32 pagetblindex=PTX((uint32)startVA);
@@ -324,7 +311,6 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 		uint32 Rva = ROUNDDOWN((uint32)startVA, PAGE_SIZE);
 	    uint32 Rsize = ROUNDUP(obj->size, PAGE_SIZE);
 	    uint32 end_va=Rsize+Rva;
-		cprintf(" \n first check \n");
 
 		  for(uint32 i=Rva;i <end_va;i+=PAGE_SIZE){
 		  		unmap_frame(myenv->env_page_directory,i);
@@ -356,11 +342,5 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 			 free_share(obj);
 		 }
 
-		 cprintf("\nfree shared end \n");
-
-
 		return 0;
-
-
-
 }
