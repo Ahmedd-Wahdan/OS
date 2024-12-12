@@ -341,6 +341,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 					}
 
 					struct FrameInfo *new_frame_ptr;
+					bool is_vic_last = (victimWSElement==faulted_env->page_last_WS_element)?1:0;
 					int madian = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
 					int rett = allocate_frame(&new_frame_ptr);
 					map_frame(faulted_env->env_page_directory, new_frame_ptr, fault_va,
@@ -372,6 +373,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 					struct WorkingSetElement* new_ws_element = env_page_ws_list_create_element(faulted_env, fault_va);
 					LIST_INSERT_BEFORE(&faulted_env->page_WS_list, victimWSElement, new_ws_element);
 					env_page_ws_invalidate(faulted_env, victimWSElement->virtual_address);
+
+					if(is_vic_last){break;}
 
 					if (LIST_NEXT(new_ws_element) != NULL) {
 						faulted_env->page_last_WS_element = LIST_NEXT(new_ws_element);
