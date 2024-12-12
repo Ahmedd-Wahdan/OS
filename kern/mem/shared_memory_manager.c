@@ -147,7 +147,10 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	{     return E_SHARED_MEM_EXISTS;
 		}
 	struct Share *sharedobj;
+
+	acquire_spinlock(&(AllShares.shareslock));
 	sharedobj=create_share(ownerID,shareName,size,isWritable);
+	release_spinlock(&(AllShares.shareslock));
 
 	uint32 Rsize=ROUNDUP(size,PAGE_SIZE);
 	uint32 Rva =ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);

@@ -59,7 +59,6 @@ unsigned int kheap_physical_address(unsigned int virtual_address);
 
 int numOfKheapVACalls ;
 
-
 //TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - add suitable code here
 
 #define MAX_NUM_OF_PAGES (KERNEL_HEAP_MAX - KERNEL_HEAP_START) / PAGE_SIZE
