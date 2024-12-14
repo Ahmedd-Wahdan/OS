@@ -312,3 +312,14 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	syscall(SYS_allocate_user_mem, virtual_address, size, 0, 0, 0);
 	return;
 }
+void sys_queue(struct __semdata* semdata, int flag )
+{  syscall(SYS_queue,(uint32)semdata,flag,0,0,0);
+return ;
+	}
+
+void sys_init_queue(struct Env_Queue* queue) {
+    syscall(SYS_init_queue, (uint32)queue, 0, 0, 0, 0);
+    return;
+}
+
+

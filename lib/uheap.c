@@ -277,8 +277,7 @@ void sfree(void* virtual_address)
 	    int32 ID=arr[first_page].ID;
 
 	    uint32 size =Pages_arr_user_heap[first_page].psize;
-	    int pgs_needed=size/PAGE_SIZE;
-		sys_free_user_mem(va, size);
+	    int pgs_needed=ROUNDUP(size,PAGE_SIZE)/PAGE_SIZE;
 
         int res=sys_freeSharedObject(ID,(void*)va);
 

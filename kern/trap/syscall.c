@@ -361,6 +361,33 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 /* SEMAPHORES SYSTEM CALLS */
 /*******************************/
 //[PROJECT'24.MS3] ADD SUITABLE CODE HERE
+void sys_queue(struct __semdata* semdata, int flag) {
+
+	if (flag == 1) {
+		acquire_spinlock(&(ProcessQueues.qlock));
+		struct Env *readyP = dequeue(&(semdata->queue));
+		sched_insert_ready(readyP);
+		readyP->env_status = ENV_READY;
+		release_spinlock(&(ProcessQueues.qlock));
+		semdata->lock=0;
+
+	} else {
+		struct Env *process =cur_env;
+		enqueue(&(semdata->queue), process);
+		semdata->lock = 0;
+		acquire_spinlock(&(ProcessQueues.qlock));
+		process->env_status = ENV_BLOCKED;
+		sched();
+		release_spinlock(&(ProcessQueues.qlock));
+
+	}
+}
+
+void sys_init_queue(struct Env_Queue* q)
+{
+	init_queue(q);
+}
+
 
 
 /*******************************/
@@ -530,6 +557,14 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 		return 0;
 		break;
 	//======================================================================
+	case SYS_queue:
+		sys_queue((struct __semdata*) a1, (int) a2);
+		break;
+	case SYS_init_queue:
+	    init_queue((struct Env_Queue*)a1);
+	    break;
+
+
 	case SYS_cputs:
 		sys_cputs((const char*)a1,a2,(uint8)a3);
 		return 0;
