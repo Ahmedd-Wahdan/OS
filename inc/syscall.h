@@ -52,6 +52,7 @@ enum
 	SYS_allocate_user_mem,
 	SYS_init_queue,
 	SYS_queue,
+	SYS_env_set_priority,
 
 
 

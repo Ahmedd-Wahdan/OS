@@ -33,6 +33,7 @@ void get_into_prompt() __attribute__((noreturn));
 
 /*2024*/
 int process_command(int number_of_arguments, char** arguments);
-
+//Scheduler Command
+int initialize_scheduler(int number_of_arguments, char **arguments);
 
 #endif	// !FOS_KERN_MONITOR_H

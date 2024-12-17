@@ -10,6 +10,7 @@
 #include <kern/cmd/command_prompt.h>
 #include <kern/cpu/cpu.h>
 #include <kern/cpu/picirq.h>
+#include <kern/cpu/sched_helpers.h>
 
 
 uint32 isSchedMethodRR(){return (scheduler_method == SCH_RR);}
@@ -249,15 +250,20 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 	//TODO: [PROJECT'24.MS3 - #07] [3] PRIORITY RR Scheduler - sched_init_PRIRR
 	//Your code is here
 	//Comment the following line
-	panic("Not implemented yet");
+	//panic("Not implemented yet");
 
+	num_of_ready_queues = numOfPriorities;
 
+	sched_set_starv_thresh(starvThresh);
 
+	ProcessQueues.env_ready_queues = kmalloc(num_of_ready_queues * sizeof(struct Env_Queue));
+	for(int priority = 0; priority < numOfPriorities; priority++)
+	{
+		init_queue(&(ProcessQueues.env_ready_queues[priority]));
+	}
 
-
-
-
-
+	quantums = kmalloc(sizeof(uint8)) ;
+	quantums[0] = quantum;
 
 	//=========================================
 	//DON'T CHANGE THESE LINES=================

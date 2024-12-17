@@ -322,4 +322,13 @@ void sys_init_queue(struct Env_Queue* queue) {
     return;
 }
 
+//Scheduler
+void sys_env_set_priority(int32 envID, int priority)
+{
+	syscall(SYS_env_set_priority, envID, priority, 0, 0, 0);
+}
+
+
+
+
 

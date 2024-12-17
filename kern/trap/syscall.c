@@ -508,6 +508,12 @@ void sys_run_env(int32 envId)
 	sched_run_env(envId);
 }
 
+//Scheduler
+void sys_env_set_priority(int32 envID, int priority)
+{
+	env_set_priority(envID, priority);
+}
+
 
 //====================================
 /*******************************/

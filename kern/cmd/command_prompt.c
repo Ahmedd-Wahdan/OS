@@ -500,3 +500,16 @@ return CMD_MATCHED;}
 
 	return CMD_INVALID;
 }
+
+//Scheduler Command
+int initialize_scheduler(int number_of_arguments, char **arguments)
+{
+	uint8 numOfPriorities = strtol(arguments[1], NULL, 10);
+	uint8 quantam = strtol(arguments[2], NULL, 10);
+	uint8 Threshold = strtol(arguments[3], NULL, 10);
+
+	sched_init_PRIRR(numOfPriorities, quantam, Threshold);
+
+	return 0;
+}
+
