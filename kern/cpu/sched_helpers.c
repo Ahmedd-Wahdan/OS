@@ -10,7 +10,7 @@
 #include <kern/cmd/command_prompt.h>
 #include <kern/cpu/cpu.h>
 
-int Threshold; // The initialize function gives it a value.
+
 
 //void on_clock_update_WS_time_stamps();
 extern void cleanup_buffers(struct Env* e);
@@ -142,7 +142,12 @@ void sched_insert_ready0(struct Env* env)
 		enqueue(&(ProcessQueues.env_ready_queues[0]), env);
 	}
 }
-
+//============================================================
+// [*] Get Current Time of Each process
+//============================================================
+uint32 get_current_time(){
+	return quantums[0] * ticks;
+}
 //============================================================
 // [2] Insert the given Env in the priority-based Ready Queue:
 //============================================================
@@ -157,6 +162,7 @@ void sched_insert_ready(struct Env* env)
 	{
 		//cprintf("\nInserting %d into ready queue 0\n", env->env_id);
 		env->env_status = ENV_READY ;
+		env->startTime = get_current_time();
 		enqueue(&(ProcessQueues.env_ready_queues[env->priority]), env);
 	}
 }

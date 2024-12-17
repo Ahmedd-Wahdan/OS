@@ -186,6 +186,7 @@ struct Env {
 	//2020
 	uint32 nPageIn, nPageOut, nNewPageAdded;
 	uint32 nClocks ;
+	uint32 startTime; //the start time of process
 
 };
 

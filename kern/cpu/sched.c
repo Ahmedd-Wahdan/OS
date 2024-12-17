@@ -361,7 +361,6 @@ struct Env* fos_scheduler_PRIRR()
 	if(cur_env != NULL){
 		sched_insert_ready(cur_env);
 	}
-
 	for(int i = 0 ; i < num_of_ready_queues ; ++i){
 		struct Env* next_env = dequeue(&ProcessQueues.env_ready_queues[i]);
 		if(next_env != NULL){
@@ -369,7 +368,6 @@ struct Env* fos_scheduler_PRIRR()
 			return next_env;
 		}
 	}
-
 	return NULL;
 }
 
@@ -379,15 +377,23 @@ struct Env* fos_scheduler_PRIRR()
 //========================================
 void clock_interrupt_handler(struct Trapframe* tf)
 {
-	if (isSchedMethodPRIRR())
-	{
+	if (isSchedMethodPRIRR()){
 		//TODO: [PROJECT'24.MS3 - #09] [3] PRIORITY RR Scheduler - clock_interrupt_handler
 		//Your code is here
 		//Comment the following line
-		panic("Not implemented yet");
+		//panic("Not implemented yet");
+		uint32 waitingTime = 0;
+		for(int i = 1 ; i < num_of_ready_queues ; ++i){
+			struct Env* cur = LIST_LAST(&ProcessQueues.env_ready_queues[i]);
+			while(cur != NULL){
+				waitingTime = get_current_time() - cur->startTime;
+				if(waitingTime > Threshold * quantums[0]){
+					env_set_priority(cur->env_id,cur->priority - 1);
+				}
+				cur = LIST_PREV(cur);
+			}
+		}
 	}
-
-
 
 	/********DON'T CHANGE THESE LINES***********/
 	ticks++ ;
