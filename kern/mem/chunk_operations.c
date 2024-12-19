@@ -204,7 +204,8 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size){
 		}
 
 
-		//env_page_ws_invalidate(e, i);
+
+		env_page_ws_invalidate(e, i);
 }
 
 	//TODO: [PROJECT'24.MS2 - BONUS#3] [3] USER HEAP [KERNEL SIDE] - O(1) free_user_mem

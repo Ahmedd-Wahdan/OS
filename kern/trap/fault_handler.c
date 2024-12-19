@@ -288,6 +288,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 			int rett = allocate_frame(&new_frame_ptr);
 			map_frame(faulted_env->env_page_directory, new_frame_ptr, fault_va,
 					PERM_USER | PERM_PRESENT | PERM_WRITEABLE | PERM_AVAILABLE);
+			
 
 		} else {
 			int rett = allocate_frame(&new_frame_ptr);

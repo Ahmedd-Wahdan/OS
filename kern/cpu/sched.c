@@ -387,7 +387,7 @@ void clock_interrupt_handler(struct Trapframe* tf)
 			struct Env* cur = LIST_LAST(&ProcessQueues.env_ready_queues[i]);
 			while(cur != NULL){
 				waitingTime = get_current_time() - cur->startTime;
-				if(waitingTime > Threshold * quantums[0]){
+				if(waitingTime > Threshold){
 					env_set_priority(cur->env_id,cur->priority - 1);
 				}
 				cur = LIST_PREV(cur);
