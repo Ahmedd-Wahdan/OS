@@ -203,15 +203,9 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size){
 			pf_remove_env_page(e, i);
 		}
 
-		if(pt_get_page_permissions(e->env_page_directory, i) & PERM_PRESENT){
-			uint32* _;
-			struct WorkingSetElement* wse = get_frame_info(e->env_page_directory, i, &_)->wse;
-			unmap_frame(e->env_page_directory, i);
-			LIST_REMOVE(&e->page_WS_list, wse);
-			kfree(wse);
-		}
 
-		//env_page_ws_invalidate(e, i);
+
+		env_page_ws_invalidate(e, i);
 }
 
 	//TODO: [PROJECT'24.MS2 - BONUS#3] [3] USER HEAP [KERNEL SIDE] - O(1) free_user_mem

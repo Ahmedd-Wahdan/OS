@@ -288,8 +288,6 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 			int rett = allocate_frame(&new_frame_ptr);
 			map_frame(faulted_env->env_page_directory, new_frame_ptr, fault_va,
 					PERM_USER | PERM_PRESENT | PERM_WRITEABLE | PERM_AVAILABLE);
-			if (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX)
-				pf_add_empty_env_page(faulted_env, fault_va, 1);
 
 		} else {
 			int rett = allocate_frame(&new_frame_ptr);
