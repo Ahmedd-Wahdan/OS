@@ -146,7 +146,7 @@ void sched_insert_ready0(struct Env* env)
 // [*] Get Current Time of Each process
 //============================================================
 uint32 get_current_time(){
-	return quantums[0] * ticks;
+	return ticks;
 }
 //============================================================
 // [2] Insert the given Env in the priority-based Ready Queue:
@@ -720,7 +720,6 @@ void env_set_priority(int envID, int priority)
 	//Your code is here
 	//Comment the following line
 	//panic("Not implemented yet");
-
 	proc->priority = priority;
 
 	if(proc->env_status == ENV_READY)

@@ -407,8 +407,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		//panic("realloc_block_FF is not implemented yet");
 		//Your Code is Here...
 
-
-
+		//Done
 		if (new_size <= 0)
 		{
 			if(va != NULL)
@@ -425,6 +424,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 			new_size = DYN_ALLOC_MIN_BLOCK_SIZE;
 		}
 
+		//Done
 		if(va == NULL)
 		{
 			return alloc_block_FF(new_size);
@@ -439,7 +439,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		}
 		else if(size < old_size)
 		{
-
 			set_block_data(va, size, 1);
 
 			void *next_va = (char *)va + old_size;
@@ -491,7 +490,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		}
 		else if(size > old_size)
 		{
-
 			void *next_va = (char *)va + old_size;
 
 			bool next_is_free = is_free_block(next_va);
@@ -518,8 +516,16 @@ void *realloc_block_FF(void* va, uint32 new_size)
 			}
 			else
 			{
+				struct BlockElement *cur;
+
+				void * new_va = alloc_block_FF(new_size);
+				if(new_va == NULL)
+				{
+					return va;
+				}
+				memcpy(new_va, va, old_size);
 				free_block(va);
-				return alloc_block_FF(new_size);
+				return new_va;
 			}
 
 		}
