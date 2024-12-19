@@ -711,6 +711,8 @@ void env_set_priority(int envID, int priority)
 {
 	//TODO: [PROJECT'24.MS3 - #06] [3] PRIORITY RR Scheduler - env_set_priority
 
+	acquire_spinlock(&ProcessQueues.qlock);
+
 	//Get the process of the given ID
 	struct Env* proc ;
 	envid2env(envID, &proc, 0);
@@ -726,6 +728,8 @@ void env_set_priority(int envID, int priority)
 		sched_remove_ready(proc);
 		sched_insert_ready(proc);
 	}
+
+	release_spinlock(&ProcessQueues.qlock);
 
 	return;
 }

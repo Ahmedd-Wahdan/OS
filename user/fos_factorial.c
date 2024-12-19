@@ -21,6 +21,7 @@ _main(void)
 
 int64 factorial(int n)
 {
+	//cprintf("n = %d\n", n);
 	if (n <= 1)
 		return 1 ;
 	return n * factorial(n-1) ;

@@ -383,7 +383,7 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//Comment the following line
 		//panic("Not implemented yet");
 		uint32 waitingTime = 0;
-		for(int i = 1 ; i < num_of_ready_queues ; ++i){
+		for(int i = 1 ; i < num_of_ready_queues; ++i){
 			struct Env* cur = LIST_LAST(&ProcessQueues.env_ready_queues[i]);
 			while(cur != NULL){
 				waitingTime = get_current_time() - cur->startTime;
