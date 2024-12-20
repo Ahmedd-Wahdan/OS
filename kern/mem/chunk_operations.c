@@ -218,13 +218,11 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size){
 	/*Remove this line before start coding*/
 	/*====================================*/
 
-	//TODO: [PROJECT'24.MS2 - #15] [3] USER HEAP [KERNEL SIDE] - free_user_mem
-	// Write your code here, remove the panic and write your code
-	//panic("free_user_mem() is not implemented yet...!!");
 	uint32 Rva = ROUNDDOWN(virtual_address, PAGE_SIZE);
     uint32 Rsize = ROUNDUP(size, PAGE_SIZE);
 
 	uint32 end_va=Rsize+Rva;
+//	cprintf("\n in free \n");
 
 	for(int i=Rva;i <end_va;i+=PAGE_SIZE){
 		pt_set_page_permissions(e->env_page_directory, i, 0, PERM_AVAILABLE);
@@ -232,19 +230,12 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size){
 			pf_remove_env_page(e, i);
 		}
 
+
+
 		env_page_ws_invalidate(e, i);
-//		struct WorkingSetElement* tmp = LIST_FIRST(&e->page_WS_list);
-//		struct WorkingSetElement* min = LIST_FIRST(&e->page_WS_list);
-//		LIST_FOREACH(tmp,&e->page_WS_list){
-//			if(tmp->ws_time_stamp<min->ws_time_stamp){
-//				min=tmp;
-//			}
-//
-//		}
-//		env_page_ws_print(e);
+
 		sort_ws_list(e);
-//		env_page_ws_print(e);
-//		panic("after sorting");
+		e->page_last_WS_element = LIST_FIRST(&e->page_WS_list);
 
 }
 
