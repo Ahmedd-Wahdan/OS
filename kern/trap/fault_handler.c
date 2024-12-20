@@ -314,7 +314,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 	else //REPLACMENT USING NTH CHANCE
 	{
 
-		victimWSElement = faulted_env->page_last_WS_element;
+//		victimWSElement = faulted_env->page_last_WS_element;
 				int max_sweeps = (page_WS_max_sweeps < 0 ? -page_WS_max_sweeps : page_WS_max_sweeps);
 				bool give_chance = (page_WS_max_sweeps < 0 ? 1 : 0);
 
@@ -456,9 +456,10 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 				}
 				struct WorkingSetElement * new_ws=env_page_ws_list_create_element(faulted_env,fault_va);
 				LIST_INSERT_BEFORE(&faulted_env->page_WS_list,victum,new_ws);
-//				bool is_last = victum->virtual_address==faulted_env->page_last_WS_element->virtual_address;
-				env_page_ws_invalidate(faulted_env,victum->virtual_address);
 
+				env_page_ws_invalidate(faulted_env,victum->virtual_address);
+				bool is_last = victum==faulted_env->page_last_WS_element;
+				if(!is_last){
 				if(LIST_NEXT(new_ws)==NULL)
 				{
 					faulted_env->page_last_WS_element=LIST_FIRST(&(faulted_env->page_WS_list));
@@ -466,6 +467,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 				else
 				{
 					faulted_env->page_last_WS_element=LIST_NEXT(new_ws);
+				}
 				}
 
 
