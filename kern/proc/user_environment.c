@@ -946,6 +946,7 @@ void initialize_environment(struct Env* e, uint32* ptr_user_page_directory, unsi
 	int i;
 	e->env_page_directory = ptr_user_page_directory;
 	e->env_cr3 = phys_user_page_directory;
+	e->stamp=0;
 
 	//copy the kernel area only (to avoid copying the currently shared objects)
 	for (i = 0 ; i < PDX(USER_TOP) ; i++)

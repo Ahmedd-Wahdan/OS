@@ -62,6 +62,7 @@ struct WorkingSetElement {
 	uint8 empty;
 	//2012
 	unsigned int time_stamp ;
+	unsigned int ws_time_stamp ;
 
 	//2021
 	unsigned int sweeps_counter;
@@ -99,6 +100,7 @@ struct Env {
 	//================
 	/*MAIN INFO...*/
 	//================
+	uint32 stamp;
 	struct Trapframe *env_tf;		// Saved registers during the trap (at the top of the user kernel stack)
 	struct Context *context;		// Saved registers for context switching (env <--> scheduler) (below the trap frame at the user kernel stack)
 	LIST_ENTRY(Env) prev_next_info;	// Free list link pointers

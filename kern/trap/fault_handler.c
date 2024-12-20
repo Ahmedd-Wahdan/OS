@@ -11,6 +11,7 @@
 #include <kern/cpu/cpu.h>
 #include <kern/disk/pagefile_manager.h>
 #include <kern/mem/memory_manager.h>
+int warm = 0,cold=0;
 
 //2014 Test Free(): Set it to bypass the PAGE FAULT on an instruction with this length and continue executing the next one
 // 0 means don't bypass the PAGE FAULT
@@ -298,6 +299,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 					perms | PERM_WRITEABLE);
 
 		}
+//		cold++;
+//		cprintf("\n cold=%d \n",cold);
 		struct WorkingSetElement* new_ws_element =
 				env_page_ws_list_create_element(faulted_env, fault_va);
 		LIST_INSERT_TAIL(&faulted_env->page_WS_list, new_ws_element);
@@ -311,6 +314,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 	}
 	else //REPLACMENT USING NTH CHANCE
 	{
+//		warm++;
+//		cprintf("\n warm=%d \n",warm);
 		victimWSElement = faulted_env->page_last_WS_element;
 		int max_sweeps = (
 				page_WS_max_sweeps < 0 ?

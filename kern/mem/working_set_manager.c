@@ -14,6 +14,7 @@
 /// Dealing with environment working set
 #if USE_KHEAP
 
+
 inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, uint32 virtual_address)
 {
 	//TODO: [PROJECT'24.MS2 - #07] [2] FAULT HANDLER I - Create a new WS element
@@ -23,9 +24,8 @@ inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, 
 	if(element == NULL) panic("Failed to allocate element for working set!");
 
 	element->virtual_address = virtual_address;
-
-	uint32* _;
-	get_frame_info(e->env_page_directory, virtual_address, &_)->wse = element;
+	element->ws_time_stamp = e->stamp;
+	e->stamp++;
 
 	return element;
 }
@@ -132,7 +132,7 @@ void env_page_ws_print(struct Env *e)
 			cprintf("%d: %x",i, virtual_address);
 
 			//2021
-			cprintf(", used= %d, modified= %d, buffered= %d, time stamp= %x, sweeps_cnt= %d",
+			cprintf(", used= %d, modified= %d, buffered= %d, time stamp= %d, sweeps_cnt= %d",
 					isUsed, isModified, isBuffered, time_stamp, wse->sweeps_counter) ;
 
 			if(wse == e->page_last_WS_element)

@@ -181,6 +181,35 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	}
 }
 
+void sort_ws_list(struct Env* e){
+
+    if (LIST_EMPTY(&e->page_WS_list) || LIST_SIZE(&e->page_WS_list) < 2) {
+        return;
+    }
+
+    struct WorkingSetElement *current = LIST_FIRST(&e->page_WS_list);
+    struct WorkingSetElement *next;
+
+
+    while (current != NULL) {
+        next = LIST_NEXT(current);
+        struct WorkingSetElement *iter = current;
+
+        while (LIST_PREV(iter) != NULL && LIST_PREV(iter)->ws_time_stamp > iter->ws_time_stamp) {
+            struct WorkingSetElement *prev = LIST_PREV(iter);
+
+
+            LIST_REMOVE(&e->page_WS_list, iter);
+
+
+            LIST_INSERT_BEFORE(&e->page_WS_list, prev, iter);
+        }
+
+        current = next;
+    }
+
+
+}
 //=====================================
 // 2) FREE USER MEMORY:
 //=====================================
@@ -203,9 +232,20 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size){
 			pf_remove_env_page(e, i);
 		}
 
-
-
 		env_page_ws_invalidate(e, i);
+//		struct WorkingSetElement* tmp = LIST_FIRST(&e->page_WS_list);
+//		struct WorkingSetElement* min = LIST_FIRST(&e->page_WS_list);
+//		LIST_FOREACH(tmp,&e->page_WS_list){
+//			if(tmp->ws_time_stamp<min->ws_time_stamp){
+//				min=tmp;
+//			}
+//
+//		}
+//		env_page_ws_print(e);
+		sort_ws_list(e);
+//		env_page_ws_print(e);
+//		panic("after sorting");
+
 }
 
 	//TODO: [PROJECT'24.MS2 - BONUS#3] [3] USER HEAP [KERNEL SIDE] - O(1) free_user_mem
