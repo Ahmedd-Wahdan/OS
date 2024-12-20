@@ -140,7 +140,7 @@ void fault_handler(struct Trapframe *tf) {
 	last_fault_va = fault_va;
 	last_faulted_env = cur_env;
 	/******************************************************/
-	//2017: Check stack overflow for Kernel
+	//2017: flagk stack overflow for Kernel
 	int userTrap = 0;
 	if ((tf->tf_cs & 3) == 3) {
 		userTrap = 1;
@@ -161,7 +161,7 @@ void fault_handler(struct Trapframe *tf) {
 			panic("Kernel: heap overflow exception!");
 #endif
 	}
-	//2017: Check stack underflow for User
+	//2017: flagk stack underflow for User
 	else {
 		//cprintf("trap from USER\n");
 		if (fault_va >= USTACKTOP && fault_va < USER_TOP)
@@ -176,7 +176,7 @@ void fault_handler(struct Trapframe *tf) {
 		print_trapframe(tf);
 		panic("faulted env == NULL!");
 	}
-	//check the faulted address, is it a table or not ?
+	//flagk the faulted address, is it a table or not ?
 	//If the directory entry of the faulted address is NOT PRESENT then
 	if ((faulted_env->env_page_directory[PDX(fault_va)] & PERM_PRESENT)
 			!= PERM_PRESENT) {
@@ -208,7 +208,7 @@ void fault_handler(struct Trapframe *tf) {
 			/*============================================================================================*/
 		}
 
-		/*2022: Check if fault due to Access Rights */
+		/*2022: flagk if fault due to Access Rights */
 		int perms = pt_get_page_permissions(faulted_env->env_page_directory,
 				fault_va);
 		if (perms & PERM_PRESENT)
@@ -244,7 +244,7 @@ void fault_handler(struct Trapframe *tf) {
 //=========================
 void table_fault_handler(struct Env * curenv, uint32 fault_va) {
 	//panic("table_fault_handler() is not implemented yet...!!");
-	//Check if it's a stack page
+	//flagk if it's a stack page
 	uint32* ptr_table;
 #if USE_KHEAP
 	{
@@ -289,7 +289,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 			int rett = allocate_frame(&new_frame_ptr);
 			map_frame(faulted_env->env_page_directory, new_frame_ptr, fault_va,
 					PERM_USER | PERM_PRESENT | PERM_WRITEABLE | PERM_AVAILABLE);
-			
+
 
 		} else {
 			int rett = allocate_frame(&new_frame_ptr);
@@ -306,121 +306,169 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 		LIST_INSERT_TAIL(&faulted_env->page_WS_list, new_ws_element);
 		uint32 wsSize = LIST_SIZE(&(faulted_env->page_WS_list));
 		if (wsSize == (faulted_env->page_WS_max_size)) {
-			faulted_env->page_last_WS_element = LIST_FIRST(
-					&faulted_env->page_WS_list);
+			faulted_env->page_last_WS_element = LIST_FIRST(&faulted_env->page_WS_list);
 		} else {
 			faulted_env->page_last_WS_element = NULL;
 		}
 	}
 	else //REPLACMENT USING NTH CHANCE
 	{
-//		warm++;
-//		cprintf("\n warm=%d \n",warm);
+
 		victimWSElement = faulted_env->page_last_WS_element;
-		int max_sweeps = (
-				page_WS_max_sweeps < 0 ?
-						-page_WS_max_sweeps : page_WS_max_sweeps);
-		bool give_chance = (page_WS_max_sweeps < 0 ? 1 : 0);
+				int max_sweeps = (page_WS_max_sweeps < 0 ? -page_WS_max_sweeps : page_WS_max_sweeps);
+				bool give_chance = (page_WS_max_sweeps < 0 ? 1 : 0);
 
-		while (1) {
-			if (victimWSElement == NULL)
-				victimWSElement = LIST_FIRST(&faulted_env->page_WS_list); // end of list
+				struct WorkingSetElement *victum =NULL;
 
-			int perms = pt_get_page_permissions(faulted_env->env_page_directory,
-					victimWSElement->virtual_address);
+				struct WorkingSetElement *iter = faulted_env->page_last_WS_element;
 
-			if ((perms & PERM_USED) == 0) {
-				victimWSElement->sweeps_counter++;
 
-				if (victimWSElement->sweeps_counter >= max_sweeps) {
+				int min=max_sweeps+5;
 
-					if ((perms & PERM_MODIFIED) != 0) {
-						if (!give_chance
-								|| victimWSElement->sweeps_counter
-										> max_sweeps) {
-							uint32* _;
-							struct FrameInfo* frame_info = get_frame_info(
-									faulted_env->env_page_directory,
-									victimWSElement->virtual_address, &_);
-							pf_update_env_page(faulted_env,
-									victimWSElement->virtual_address,
-									frame_info);
-						} else {
-							victimWSElement = LIST_NEXT(victimWSElement);
-							continue;
+				bool is_vic_modified=0;
+				do
+				{
+					int diff= max_sweeps - iter->sweeps_counter;
+
+					int iter_perms = pt_get_page_permissions(faulted_env->env_page_directory,iter->virtual_address);
+					if( (iter_perms&PERM_USED)==PERM_USED ) //if used
+					{
+						diff=max_sweeps+1;
+						pt_set_page_permissions(faulted_env->env_page_directory,iter->virtual_address,0,PERM_USED);
+						iter->sweeps_counter=0;
+					}
+
+					bool iter_not_modified = ((iter_perms&PERM_MODIFIED)==0) ;
+					if(!iter_not_modified && give_chance) //if its modified and inside mod algorithm
+					{
+						diff++;
+					}
+					if(min>diff)
+					{
+						min=diff;
+						victum=iter;
+						is_vic_modified=!(iter_not_modified);
+
+
+						if(min==1)
+						{
+							break;
 						}
 					}
 
-					struct FrameInfo *new_frame_ptr;
-					bool is_vic_last =
-							(victimWSElement
-									== faulted_env->page_last_WS_element) ?
-									1 : 0;
-					int madian = pt_get_page_permissions(
-							faulted_env->env_page_directory, fault_va);
-					int rett = allocate_frame(&new_frame_ptr);
-					map_frame(faulted_env->env_page_directory, new_frame_ptr,
-							fault_va,
-							PERM_USER | PERM_PRESENT | PERM_WRITEABLE
-									| PERM_AVAILABLE);
-					int ret = pf_read_env_page(faulted_env, (void*) fault_va);
-					bool check = 0;
-					if (ret < 0) { //if it is a stack page or heap page its okay to be not in disk otherwise exit
+					if(LIST_NEXT(iter)==NULL)
+					{
+						iter=LIST_FIRST(&(faulted_env->page_WS_list));
+					}
 
-						if (!((fault_va >= USER_HEAP_START
-								&& fault_va < USER_HEAP_MAX)
-								|| (fault_va < USTACKTOP
-										&& fault_va >= USTACKBOTTOM))) {
+					else
+					{
+						iter=LIST_NEXT(iter);
+					}
 
-							env_exit();
+				}while(iter!=faulted_env->page_last_WS_element);
+
+
+
+
+				struct WorkingSetElement *iter_2 = faulted_env->page_last_WS_element;
+
+
+
+				do{
+
+					if(iter_2 == victum)
+					{
+						if(min<2)
+						{
+							break;
 						}
-						check = 1;
+						min--;
 					}
+					else
+					{
 
-					if (check == 1) {
-						pt_set_page_permissions(faulted_env->env_page_directory,
-								fault_va,
-								PERM_USER | PERM_PRESENT | PERM_WRITEABLE
-										| PERM_AVAILABLE, 0);
+						int iter2_perms = pt_get_page_permissions(faulted_env->env_page_directory,iter_2->virtual_address);
 
-					} else {
-						pt_set_page_permissions(faulted_env->env_page_directory,
-								fault_va, madian, 0);
+						iter_2->sweeps_counter+=min -1;
+
+						if( !((iter2_perms&PERM_USED)==0))
+						{
+							pt_set_page_permissions(faulted_env->env_page_directory,iter_2->virtual_address,0,PERM_USED);
+							iter_2->sweeps_counter=0;
+						}
 
 					}
+					if(LIST_NEXT(iter_2)==NULL)
+										{
+											iter_2=LIST_FIRST(&(faulted_env->page_WS_list));
+										}
 
-					struct WorkingSetElement* new_ws_element =
-							env_page_ws_list_create_element(faulted_env,
-									fault_va);
-					LIST_INSERT_BEFORE(&faulted_env->page_WS_list,
-							victimWSElement, new_ws_element);
-					env_page_ws_invalidate(faulted_env,
-							victimWSElement->virtual_address);
+										else
+										{
+											iter_2=LIST_NEXT(iter_2);
+										}
 
-					if (is_vic_last) {
-						break;
-					}
+				}while(iter_2!=faulted_env->page_last_WS_element);
 
-					if (LIST_NEXT(new_ws_element) != NULL) {
-						faulted_env->page_last_WS_element = LIST_NEXT(
-								new_ws_element);
-					} else {
-						faulted_env->page_last_WS_element = LIST_FIRST(
-								&faulted_env->page_WS_list);
-					}
 
-					break;
+
+
+
+
+				if(is_vic_modified)
+				{
+
+					uint32 * _=NULL;
+					struct FrameInfo * victum_framo = get_frame_info(faulted_env->env_page_directory,(uint32)victum->virtual_address,&_);
+					pf_update_env_page(faulted_env,(uint32)victum->virtual_address,victum_framo);
+
 				}
-			}
+				struct FrameInfo* element;
+				allocate_frame(&element);
+				map_frame(faulted_env->env_page_directory,element,fault_va,PERM_USER|PERM_PRESENT|PERM_WRITEABLE|PERM_AVAILABLE);
 
-			else { // page used
-				victimWSElement->sweeps_counter = 0;
-				pt_set_page_permissions(faulted_env->env_page_directory,
-						victimWSElement->virtual_address, 0, PERM_USED);
-			}
+				uint32 result = pf_read_env_page(faulted_env,(void *) fault_va);
 
-			victimWSElement = LIST_NEXT(victimWSElement);
-		}
+				bool flag=0;
+
+
+				if(result<0)
+				{
+
+					if (!((fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX)
+										|| (fault_va < USTACKTOP && fault_va >= USTACKBOTTOM))) {
+
+									env_exit();
+								}
+								flag = 1;
+				}
+
+				int madian=pt_get_page_permissions(faulted_env->env_page_directory,fault_va);
+				if(flag)
+				{
+					pt_set_page_permissions(faulted_env->env_page_directory,fault_va,PERM_PRESENT|PERM_AVAILABLE|PERM_WRITEABLE|PERM_USER,0);
+				}
+				else
+				{
+					pt_set_page_permissions(faulted_env->env_page_directory,fault_va,madian,0);
+
+				}
+				struct WorkingSetElement * new_ws=env_page_ws_list_create_element(faulted_env,fault_va);
+				LIST_INSERT_BEFORE(&faulted_env->page_WS_list,victum,new_ws);
+//				bool is_last = victum->virtual_address==faulted_env->page_last_WS_element->virtual_address;
+				env_page_ws_invalidate(faulted_env,victum->virtual_address);
+
+				if(LIST_NEXT(new_ws)==NULL)
+				{
+					faulted_env->page_last_WS_element=LIST_FIRST(&(faulted_env->page_WS_list));
+				}
+				else
+				{
+					faulted_env->page_last_WS_element=LIST_NEXT(new_ws);
+				}
+
+
 	}
 }
 

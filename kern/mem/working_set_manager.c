@@ -122,7 +122,7 @@ void env_page_ws_print(struct Env *e)
 		LIST_FOREACH(wse, &(e->page_WS_list))
 		{
 			uint32 virtual_address = wse->virtual_address;
-			uint32 time_stamp = wse->time_stamp;
+			uint32 time_stamp = wse->ws_time_stamp;
 
 			uint32 perm = pt_get_page_permissions(e->env_page_directory, virtual_address) ;
 			char isModified = ((perm&PERM_MODIFIED) ? 1 : 0);
