@@ -65,7 +65,7 @@ void wakeup_one(struct Channel *chan)
     if(size!=0){
 
 	 struct Env *readyP = dequeue(&(chan->queue));
-	 sched_insert_ready0(readyP);
+	 sched_insert_ready(readyP);
 	 readyP->env_status=ENV_READY;
 	 release_spinlock(&(ProcessQueues.qlock));
 
@@ -98,7 +98,7 @@ void wakeup_all(struct Channel *chan)
 
 
 			 struct Env *readyP = dequeue(&(chan->queue));
-			 sched_insert_ready0(readyP);
+			 sched_insert_ready(readyP);
 			 readyP->env_status=ENV_READY;
 
 	}
